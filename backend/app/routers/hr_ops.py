@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -67,6 +67,7 @@ def draft_out(db: Session, d: EmailDraft) -> dict:
                       "contact_status": app.contact_status},
         "job": {"id": job.id, "title": job.title},
         "preview": email_svc.compose(d, db),
+        "editable_body": d.body,
         "digest": email_svc.draft_digest(d, db),
         "blocking_problem": problem,
         "approved_by": approver.full_name if approver else None, "approved_at": d.approved_at,
@@ -332,4 +333,3 @@ def approvals(p: Principal = Depends(require_staff), db: Session = Depends(get_d
     }
 
 
-_ = datetime  # keep import for type hints in docs

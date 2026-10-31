@@ -1,0 +1,23 @@
+{
+  "count": 1000,
+  "mode": "replay (synthetic deterministic adapter - no LLM calls)",
+  "python": "3.12.3",
+  "cpu_count": 2,
+  "platform": "Linux-7.0.0-38-generic-x86_64-with-glibc2.39",
+  "generate_pdfs_s": 2.68,
+  "intake_s": 399.67,
+  "intake_per_application_ms": 399.7,
+  "applications": 1000,
+  "parse_needs_review": 37,
+  "replay_analysis_s": 29.57,
+  "replay_tasks_processed": 1000,
+  "second_run_saved_evaluation_reuse_s": 15.58,
+  "second_run_reused": 1000,
+  "ranking_s": 2.15,
+  "proposed": 20,
+  "review_list": 426,
+  "reweight_preview_s": 1.97,
+  "reweight_llm_calls": 0,
+  "api_list_page_ms": 162.2,
+  "api_list_total": 1000
+}

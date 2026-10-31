@@ -7,6 +7,16 @@ import unicodedata
 
 EMAIL_RE = re.compile(r"(?<![\w.+-])([A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,24})(?![\w-])")
 PHONE_RE = re.compile(r"(?<!\w)(\+?\d[\d ()./-]{7,}\d)(?!\w)")
+# Year ranges and month/year dates look like digit runs but are job-relevant, never contact data.
+DATE_LIKE_RE = re.compile(r"^((0?[1-9]|1[0-2])[/.])?(19|20)\d{2}(\s*[-\u2013/]\s*((0?[1-9]|1[0-2])[/.])?(19|20)\d{2})?$")
+
+
+def _is_phone(candidate: str) -> bool:
+    c = candidate.strip()
+    if DATE_LIKE_RE.match(c):
+        return False
+    digits = re.sub(r"\D", "", c)
+    return 8 <= len(digits) <= 15 and (c.startswith(("+", "0", "(")) or len(digits) >= 9)
 URL_RE = re.compile(r"\b(?:https?://|www\.)\S+", re.I)
 
 # Lines whose content is identity/protected information irrelevant to job fit.
@@ -74,8 +84,7 @@ def extract_contact(pages: list[dict]) -> dict:
             emails.append(e)
     phones = []
     for m in PHONE_RE.finditer(full):
-        digits = re.sub(r"\D", "", m.group(1))
-        if 8 <= len(digits) <= 15 and m.group(1) not in phones:
+        if _is_phone(m.group(1)) and m.group(1) not in phones:
             phones.append(m.group(1).strip())
     return {"emails": emails[:5], "phones": phones[:3]}
 
@@ -102,7 +111,7 @@ def redact(text: str, names: list[str]) -> str:
     """
     t = EMAIL_RE.sub("[EMAIL]", text)
     t = URL_RE.sub("[URL]", t)
-    t = PHONE_RE.sub(lambda m: "[PHONE]" if len(re.sub(r"\D", "", m.group(1))) >= 8 else m.group(0), t)
+    t = PHONE_RE.sub(lambda m: "[PHONE]" if _is_phone(m.group(1)) else m.group(0), t)
     t = PROTECTED_LINE_RE.sub("[REDACTED PERSONAL DETAIL]", t)
     for n in names:
         for part in {n, *n.split()}:
