@@ -77,3 +77,18 @@ def test_staff_must_use_staff_portal_and_wrong_password_fails():
     assert c.post("/api/auth/login", json={"email": f"rec@{D}", "password": PW, "portal": "candidate"}).status_code == 403
     assert c.post("/api/auth/login", json={"email": f"rec@{D}", "password": "wrong-password",
                                            "portal": "staff"}).status_code == 401
+
+
+def test_candidate_edits_name_and_changes_password_revoking_other_sessions():
+    a = register("Alice Example", f"alice@{D}")
+    other = Client().login(f"alice@{D}")
+    r = a.patch("/api/candidate/profile", json={"full_name": "Alice B. Example"})
+    assert r.status_code == 200 and r.json()["full_name"] == "Alice B. Example"
+    assert a.patch("/api/candidate/profile", json={"full_name": "X", "email": f"evil@{D}"}).status_code == 422
+    assert a.post("/api/candidate/profile/password",
+                  json={"current_password": "wrong-one", "new_password": "Another-long-pw-2"}).status_code == 400
+    r = a.post("/api/candidate/profile/password", json={"current_password": PW, "new_password": "Another-long-pw-2"})
+    assert r.status_code == 200
+    assert a.get("/api/candidate/profile").status_code == 200
+    assert other.get("/api/candidate/profile").status_code == 401
+    Client().login(f"alice@{D}", password="Another-long-pw-2")

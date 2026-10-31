@@ -23,23 +23,23 @@ test("candidate applies, HR analyses, approves shortlist and invitation, candida
   await cand.getByRole("checkbox").check();
   await cand.getByRole("button", { name: "Submit application" }).click();
   await expect(cand.getByText("Application submitted")).toBeVisible();
-  await expect(cand.getByText("matches account")).toBeVisible();
+  await expect(cand.getByRole("img", { name: "matches your account" })).toBeVisible();
 
   // 2. Recruiter authorizes a replay analysis run for all unevaluated applications
   const hr = await (await browser.newContext()).newPage();
   hr.on("dialog", (d) => d.accept());
   await login(hr, "/hr/login", "recruiter@nordlicht.example.test", STAFF_PW);
-  await expect(hr.getByRole("heading", { name: "Recruiting dashboard" })).toBeVisible();
-  await hr.getByRole("link", { name: "Applications", exact: true }).first().click();
+  await expect(hr.getByRole("heading", { name: "Overview" })).toBeVisible();
+  await hr.getByRole("complementary", { name: "Recruiting navigation" }).getByRole("link", { name: /Backend Developer \(Python\)/ }).click();
   await hr.getByRole("button", { name: /Select all not evaluated/ }).click();
   await hr.getByRole("button", { name: /Review & authorize analysis/ }).click();
   await expect(hr.getByText(/REPLAY \(synthetic, not an LLM\)/)).toBeVisible();
   await hr.getByRole("button", { name: "Authorize run" }).click();
-  await expect(hr.getByText(/Latest analysis run\s*completed/)).toBeVisible({ timeout: 60_000 });
+  await expect(hr.getByText(/Analysis run\s*completed/)).toBeVisible({ timeout: 60_000 });
 
   // Evidence drawer shows quotations with page references
   await hr.getByRole("row", { name: /Amira Ben Salah/ }).getByRole("button", { name: "Evidence" }).click();
-  await expect(hr.getByText(/page 1 · p1-s\d+ · candidate claim, not verified/).first()).toBeVisible();
+  await expect(hr.getByText(/p1 · p1-s\d+/).first()).toBeVisible();
   await hr.getByRole("button", { name: "Close panel" }).click();
 
   // 3. Shortlist: live weight preview (0 model calls), save draft, approve
@@ -76,8 +76,8 @@ test("candidate applies, HR analyses, approves shortlist and invitation, candida
   await amira.getByLabel("Password").fill(CAND_PW);
   await amira.getByRole("button", { name: "Sign in" }).click();
   await amira.waitForURL(/\/candidate\/interviews\//);
-  await expect(amira.getByRole("heading", { name: /Interview for Backend Developer/ })).toBeVisible();
-  await amira.locator(".slot-pick").first().click();
+  await expect(amira.getByText(/Interview · Backend Developer/)).toBeVisible();
+  await amira.locator(".slot-btn").first().click();
   await amira.getByRole("button", { name: "Request this time" }).click();
   await expect(amira.getByText(/Requested - awaiting HR confirmation/)).toBeVisible();
 
@@ -87,5 +87,5 @@ test("candidate applies, HR analyses, approves shortlist and invitation, candida
   await pending.getByRole("button", { name: "Confirm interview" }).click();
   await expect(hr.locator(".criterion", { hasText: "Amira Ben Salah" })).toHaveCount(0);
   await amira.reload();
-  await expect(amira.getByText(/^Confirmed/)).toBeVisible();
+  await expect(amira.getByText("Confirmed by the recruiter")).toBeVisible();
 });

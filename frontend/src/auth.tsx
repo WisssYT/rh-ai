@@ -12,6 +12,7 @@ export interface User {
 export interface SystemStatus {
   product_name: string;
   company_name: string;
+  company_about?: string;
   ai_mode: "live" | "replay";
   timezone: string;
   max_upload_mb: number;
@@ -88,15 +89,13 @@ export function useAuth(): Ctx {
 export function RequireRole({ roles, children, loginPath }: { roles: Role[]; children: ReactNode; loginPath: string }) {
   const { user, loading } = useAuth();
   const loc = useLocation();
-  if (loading) return <div className="page"><p className="muted">Loading…</p></div>;
+  if (loading) return <div className="gate"><p className="muted">Loading…</p></div>;
   if (!user) return <Navigate to={`${loginPath}?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />;
   if (!roles.includes(user.role))
     return (
-      <div className="page narrow">
-        <div className="card">
-          <h1>Not available for this account</h1>
-          <p>You are signed in as {user.email} ({user.role}). This area needs a {roles.join(" or ")} account.</p>
-        </div>
+      <div className="gate">
+        <h1>Not available for this account</h1>
+        <p>You are signed in as {user.email} ({user.role}). This area needs a {roles.join(" or ")} account.</p>
       </div>
     );
   return <>{children}</>;

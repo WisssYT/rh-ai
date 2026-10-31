@@ -18,7 +18,7 @@ The product name lives in `PRODUCT_NAME` (backend env) and `VITE_PRODUCT_NAME` /
 - [Quick start](#quick-start) · [Accounts and URLs](#accounts-and-urls) · [Tests](#tests)
 - [Features](#what-works-end-to-end) · [Role matrix](#role-matrix) · [Approval interpretation](#how-recorded-is-interpreted)
 - [AI modes, quotas, caching](#ai-live-and-replay-modes) · [Volume results](#measured-volume-results) · [Limitations](#limitations)
-- Docs: [ARCHITECTURE](docs/ARCHITECTURE.md) · [SECURITY](docs/SECURITY.md) · [DEMO](docs/DEMO.md) · [PITCH](docs/PITCH.md)
+- Docs: [ARCHITECTURE](docs/ARCHITECTURE.md) · [SECURITY](docs/SECURITY.md) · [DESIGN](docs/DESIGN.md) · [DEMO](docs/DEMO.md) · [PITCH](docs/PITCH.md)
 
 ## Quick start
 
@@ -82,7 +82,7 @@ and replay mode keep working.
 | What | URL | Login |
 | --- | --- | --- |
 | Careers site | http://localhost:5173/jobs | public |
-| Candidate account | http://localhost:5173/candidate | e.g. `amira.bensalah@example.test` / `DemoCandidate!2026`; spare: `demo.candidate@example.test` |
+| Candidate account (applications, interview booking, profile) | http://localhost:5173/candidate | e.g. `amira.bensalah@example.test` / `DemoCandidate!2026`; spare: `demo.candidate@example.test` |
 | HR dashboard | http://localhost:5173/hr/login | `recruiter@nordlicht.example.test` / `DemoStaff!2026-local` (Backend job), `analyst.recruiter@…` (Data Analyst job) |
 | Supervisor | http://localhost:5173/supervisor | `supervisor@nordlicht.example.test` / `DemoStaff!2026-local` |
 | Local inbox | http://localhost:8025 | Mailpit |
@@ -92,7 +92,7 @@ Email ownership is **not verified** in this prototype (registration only accepts
 `*.example.test` while `DEMO_MODE=true`). Booking always requires login with the invited account.
 
 ## What works end to end
-1. Candidate registers/logs in, browses jobs, submits a PDF after acknowledging the storage notice.
+1. Candidate registers/logs in, browses jobs (each role lists the criteria it is assessed on), submits a PDF after acknowledging the storage notice, and can edit their name or change their password (other sessions are signed out).
 2. Safe intake: streamed size limit, signature checks, isolated subprocess parsing with rlimits/timeout, page and
    text limits, encrypted/malformed rejection, scanned/short documents → *needs manual review*, contact email
    extracted deterministically and compared with the account.

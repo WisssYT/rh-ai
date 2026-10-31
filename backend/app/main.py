@@ -14,6 +14,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from .config import get_settings
 from .db import get_db
 from .deps import Principal, optional_principal
+from .models import Company
 from .routers import auth, candidate, hr_jobs, hr_ops, supervisor
 from .security import CSRF_COOKIE, CSRF_HEADER, SESSION_COOKIE, lookup_session
 from .services import llm
@@ -129,9 +130,11 @@ def create_app() -> FastAPI:
     @app.get("/api/system/status", tags=["system"])
     def status(p: Principal | None = Depends(optional_principal), db: Session = Depends(get_db)):
         mode = llm.current_mode(db)
+        company = db.get(Company, 1)
         out = {
             "product_name": s.product_name,
-            "company_name": s.company_name,
+            "company_name": company.name if company else s.company_name,
+            "company_about": company.about if company else "",
             "fictional_data": True,
             "demo_mode": s.demo_mode,
             "ai_mode": mode,

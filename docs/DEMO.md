@@ -40,7 +40,7 @@ recorded with their name and the exact content they approved."
 ### 0:30-1:10 · Candidate applies (window A)
 1. `/jobs` → *Backend Developer (Python)* → Log in as `demo.candidate@example.test`.
 2. Choose `dana_cv.pdf`, tick the fictional-data/storage notice, **Submit application**.
-3. Show the application page: "matches account" contact badge, the plain-text extraction. "Candidates see
+3. Show the application page: stage track, "matches account" next to the CV email, the plain-text extraction. "Candidates see
    their stage - never scores."
 
 ### 1:10-2:10 · Authorized analysis, evidence, live weights (window B)

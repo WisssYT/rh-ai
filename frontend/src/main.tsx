@@ -1,46 +1,59 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import "@fontsource-variable/newsreader/opsz.css";
+import "@fontsource-variable/newsreader/opsz-italic.css";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/ibm-plex-mono/500.css";
+import "./styles/tokens.css";
+import "./styles/candidate.css";
+import "./styles/recruiter.css";
 import { AuthProvider, RequireRole } from "./auth";
-import Layout from "./components/Layout";
+import CandidateLayout from "./components/CandidateLayout";
+import RecruiterLayout from "./components/RecruiterLayout";
 import { PRODUCT_NAME } from "./config";
-import { CandidateApplication, CandidateDashboard, CandidateInterview } from "./pages/candidate/Candidate";
+import { CandidateApplication, CandidateDashboard, CandidateInterview, CandidateProfile } from "./pages/candidate/Candidate";
 import { ApplicationsPage, HrDashboard } from "./pages/hr/HrJobs";
 import { ApprovalsPage, CalendarPage, RubricPage } from "./pages/hr/HrOps";
 import { ShortlistPage } from "./pages/hr/Shortlist";
-import { JobDetailPage, JobsPage, LoginPage, RegisterPage } from "./pages/public/Public";
+import { JobDetailPage, JobsPage, LoginPage, RegisterPage, StaffLoginPage } from "./pages/public/Public";
 import { SupervisorPage } from "./pages/supervisor/Supervisor";
-import "./styles.css";
 
 document.title = PRODUCT_NAME;
 const staff = ["recruiter", "supervisor"] as const;
+const cand = (el: React.ReactNode) => <RequireRole roles={["candidate"]} loginPath="/login">{el}</RequireRole>;
+const hr = (el: React.ReactNode) => <RequireRole roles={[...staff]} loginPath="/hr/login">{el}</RequireRole>;
 
 function App() {
   return (
     <Routes>
-      <Route element={<Layout area="public" />}>
+      {/* Candidate site */}
+      <Route element={<CandidateLayout />}>
         <Route path="/" element={<Navigate to="/jobs" replace />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="/jobs/:slug" element={<JobDetailPage />} />
-        <Route path="/login" element={<LoginPage portal="candidate" />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/candidate" element={<RequireRole roles={["candidate"]} loginPath="/login"><CandidateDashboard /></RequireRole>} />
-        <Route path="/candidate/applications/:id" element={<RequireRole roles={["candidate"]} loginPath="/login"><CandidateApplication /></RequireRole>} />
-        <Route path="/candidate/interviews/:invitationId" element={<RequireRole roles={["candidate"]} loginPath="/login"><CandidateInterview /></RequireRole>} />
+        <Route path="/candidate" element={cand(<CandidateDashboard />)} />
+        <Route path="/candidate/profile" element={cand(<CandidateProfile />)} />
+        <Route path="/candidate/applications/:id" element={cand(<CandidateApplication />)} />
+        <Route path="/candidate/interviews/:invitationId" element={cand(<CandidateInterview />)} />
       </Route>
-      <Route element={<Layout area="hr" />}>
-        <Route path="/hr/login" element={<LoginPage portal="staff" />} />
-        <Route path="/hr" element={<RequireRole roles={[...staff]} loginPath="/hr/login"><HrDashboard /></RequireRole>} />
-        <Route path="/hr/jobs/:id/applications" element={<RequireRole roles={[...staff]} loginPath="/hr/login"><ApplicationsPage /></RequireRole>} />
-        <Route path="/hr/jobs/:id/shortlist" element={<RequireRole roles={[...staff]} loginPath="/hr/login"><ShortlistPage /></RequireRole>} />
-        <Route path="/hr/jobs/:id/rubric" element={<RequireRole roles={[...staff]} loginPath="/hr/login"><RubricPage /></RequireRole>} />
-        <Route path="/hr/calendar" element={<RequireRole roles={[...staff]} loginPath="/hr/login"><CalendarPage /></RequireRole>} />
-        <Route path="/hr/approvals" element={<RequireRole roles={[...staff]} loginPath="/hr/login"><ApprovalsPage /></RequireRole>} />
-      </Route>
-      <Route element={<Layout area="supervisor" />}>
+      {/* Recruiter site */}
+      <Route path="/hr/login" element={<StaffLoginPage />} />
+      <Route element={hr(<RecruiterLayout />)}>
+        <Route path="/hr" element={<HrDashboard />} />
+        <Route path="/hr/jobs/:id/applications" element={<ApplicationsPage />} />
+        <Route path="/hr/jobs/:id/shortlist" element={<ShortlistPage />} />
+        <Route path="/hr/jobs/:id/rubric" element={<RubricPage />} />
+        <Route path="/hr/calendar" element={<CalendarPage />} />
+        <Route path="/hr/approvals" element={<ApprovalsPage />} />
         <Route path="/supervisor" element={<RequireRole roles={["supervisor"]} loginPath="/hr/login"><SupervisorPage /></RequireRole>} />
       </Route>
-      <Route path="*" element={<div className="page"><h1>Page not found</h1><a href="/jobs">Go to open positions</a></div>} />
+      <Route path="*" element={<div className="gate"><h1>Page not found</h1><a href="/jobs">Go to open roles</a></div>} />
     </Routes>
   );
 }

@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api, ApiError, fmt } from "../../api";
 import { useAuth } from "../../auth";
 import { Badge, Empty, ErrorBox, Loading, Notice, StateBadge } from "../../components/ui";
+import { Icon } from "../../components/Icon";
 import { JobNav, useJob } from "./HrJobs";
 
 // ---- Job & rubric editor -------------------------------------------------------------
@@ -220,6 +221,7 @@ export function CalendarPage() {
     d.setDate(d.getDate() + i);
     return d;
   });
+  const multipleInterviewers = new Set((items ?? []).map((s) => s.interviewer.id)).size > 1;
   const dayKey = (iso: string | Date) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(new Date(iso));
   return (
     <div className="page">
@@ -233,9 +235,9 @@ export function CalendarPage() {
           <select id="cj" value={jobId} onChange={(e) => setJobId(e.target.value)} style={{ width: 240 }}>
             {jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}
           </select>
-          <button className="btn btn-small" onClick={() => setWeek(new Date(week.getTime() - 7 * 864e5))} aria-label="Previous week">←</button>
+          <button className="btn btn-small" onClick={() => setWeek(new Date(week.getTime() - 7 * 864e5))} aria-label="Previous week"><Icon name="back" /></button>
           <span className="small">{fmt.day(week.toISOString(), tz)} – {fmt.day(days[6].toISOString(), tz)}</span>
-          <button className="btn btn-small" onClick={() => setWeek(new Date(week.getTime() + 7 * 864e5))} aria-label="Next week">→</button>
+          <button className="btn btn-small" onClick={() => setWeek(new Date(week.getTime() + 7 * 864e5))} aria-label="Next week"><Icon name="arrow" /></button>
           <button className="btn btn-small" onClick={() => setWeek(startOfDay(new Date()))}>Today</button>
         </div>
       </div>
@@ -290,10 +292,12 @@ export function CalendarPage() {
                 {list.length === 0 && <div className="small muted">No slots</div>}
                 {list.map((s) => (
                   <div key={s.id} className={`slot slot-${s.status}`}>
-                    <strong>{fmt.time(s.starts_at, tz)}–{fmt.time(s.ends_at, tz)}</strong> <StateBadge state={s.status} label={s.status === "held" ? "requested" : s.status === "booked" ? "confirmed" : "free"} />
-                    <div className="muted">{s.interviewer.name}</div>
-                    {s.booking && <div>{s.booking.candidate_name}</div>}
-                    {s.status === "available" && <button className="btn btn-ghost btn-small" onClick={() => act(`/api/hr/slots/${s.id}`, "DELETE")}>Remove</button>}
+                    <div className="spread" style={{ gap: 4 }}>
+                      <strong className="mono">{fmt.time(s.starts_at, tz)}–{fmt.time(s.ends_at, tz)}</strong>
+                      {s.status === "available" && <button className="slot-x" aria-label={`Remove ${fmt.time(s.starts_at, tz)} slot`} title="Remove slot" onClick={() => act(`/api/hr/slots/${s.id}`, "DELETE")}>×</button>}
+                    </div>
+                    <div>{s.booking ? <>{s.booking.candidate_name} <span className="muted">· {s.status === "held" ? "requested" : "confirmed"}</span></> : <span className="muted">free</span>}</div>
+                    {multipleInterviewers && <div className="muted">{s.interviewer.name}</div>}
                   </div>
                 ))}
               </div>

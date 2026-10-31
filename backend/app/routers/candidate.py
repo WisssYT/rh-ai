@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..db import get_db
 from ..deps import Principal, audit, get_application_for_candidate, limit, require_candidate
-from ..models import Application, BookingRequest, Interview, InterviewSlot, Invitation, Job, User, utcnow
+from ..models import Application, BookingRequest, Interview, InterviewSlot, Invitation, Job, RubricRevision, User, UserSession, utcnow
+from ..security import hash_password, verify_password
 from ..services import booking as booking_svc
 from ..services.analysis import ACTIVE_RUN_STATES  # noqa: F401
 from ..services.intake import check_contact, resume_path, store_and_parse
@@ -36,7 +37,13 @@ def get_job(slug_or_id: str, db: Session = Depends(get_db)):
     j = db.scalar(select(Job).where((Job.slug == slug_or_id) | (Job.id == slug_or_id), Job.status == "published"))
     if j is None:
         raise HTTPException(404, "Position not found")
-    return job_public(j)
+    out = job_public(j)
+    rubric = db.scalar(select(RubricRevision).where(RubricRevision.job_id == j.id,
+                                                    RubricRevision.revision == j.current_rubric_revision))
+    # Transparency for applicants: what the role is assessed on (no weights, no internal anchors).
+    out["criteria"] = [{"label": c["label"], "description": c["description"], "required": c.get("required", False)}
+                       for c in (rubric.criteria if rubric else [])]
+    return out
 
 
 async def _read_limited(file: UploadFile) -> bytes:
@@ -269,3 +276,43 @@ def my_bookings(p: Principal = Depends(require_candidate), db: Session = Depends
 def profile(p: Principal = Depends(require_candidate)):
     u: User = p.user
     return {"email": u.email, "full_name": u.full_name, "email_verified": False}
+
+
+class ProfileIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    full_name: str = Field(min_length=2, max_length=120)
+
+
+@router.patch("/candidate/profile")
+def update_profile(body: ProfileIn, p: Principal = Depends(require_candidate), db: Session = Depends(get_db)):
+    """Name only. The account email is the identity used for invitations and cannot be changed here."""
+    p.user.full_name = body.full_name.strip()
+    db.add(p.user)
+    audit(db, p, "account.profile_updated", "user", p.id)
+    db.commit()
+    return {"email": p.user.email, "full_name": p.user.full_name, "email_verified": False}
+
+
+class PasswordIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=10, max_length=200)
+
+
+@router.post("/candidate/profile/password")
+def change_password(body: PasswordIn, request: Request, p: Principal = Depends(require_candidate),
+                    db: Session = Depends(get_db)):
+    limit(request, "password", 5, 900, key_extra=p.id)
+    if not verify_password(p.user.password_hash, body.current_password):
+        audit(db, p, "account.password_change_failed", "user", p.id, outcome="denied")
+        db.commit()
+        raise HTTPException(400, "Current password is incorrect")
+    p.user.password_hash = hash_password(body.new_password)
+    db.add(p.user)
+    # Sign out every other session; keep the one that made the change.
+    for s in db.scalars(select(UserSession).where(UserSession.user_id == p.id, UserSession.revoked_at.is_(None),
+                                                  UserSession.id != p.session.id)):
+        s.revoked_at = utcnow()
+    audit(db, p, "account.password_changed", "user", p.id)
+    db.commit()
+    return {"ok": True}

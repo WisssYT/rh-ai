@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, ApiError, fmt } from "../../api";
 import { Badge, Empty, ErrorBox, Loading, Notice, ScoreBar, StateBadge } from "../../components/ui";
+import { Icon } from "../../components/Icon";
 import { EvidenceDrawer, JobNav, useJob } from "./HrJobs";
 
 export function ShortlistPage() {
@@ -163,34 +164,36 @@ export function ShortlistPage() {
               Save selection as draft
             </button>
             <button className="btn btn-good" disabled={busy || !draftPending || selectionDiffers} onClick={approve}>
-              Approve shortlist r{draftPending ? latest.revision : "-"}
+              {draftPending ? `Approve shortlist r${latest.revision}` : "Approve shortlist"}
             </button>
           </div>
           {approved && (
             <div className="row" style={{ marginTop: 12 }}>
               <button className="btn btn-small" disabled={busy} onClick={() => prepare("ai")}>Prepare invitation drafts (AI)</button>
               <button className="btn btn-small" disabled={busy} onClick={() => prepare("template")}>Prepare drafts (template)</button>
-              <Link to="/hr/approvals" className="btn btn-small btn-primary">Review drafts →</Link>
+              <Link to="/hr/approvals" className="btn btn-small btn-primary">Review drafts<Icon name="arrow" /></Link>
             </div>
           )}
         </div>
       </div>
       <div className="card">
-        <h2>Provisional ranking</h2>
+        <div className="spread">
+          <h2>Provisional ranking</h2>
+          <span className="small muted">{rows.length} applications · {ranking.proposed.length} proposed · {ranking.review.length} need review{rows[0]?.evaluation_source && <> · source <span className="mono">{rows[0].evaluation_source}</span></>}</span>
+        </div>
         {rows.length === 0 && <Empty title="No applications yet" />}
         {rows.length > 0 && (
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th scope="col">Select</th>
-                  <th scope="col">#</th>
-                  <th scope="col">Candidate</th>
-                  <th scope="col">Evidence score</th>
-                  <th scope="col">Range / coverage</th>
-                  <th scope="col">Status</th>
-                  <th scope="col">Review</th>
-                  <th scope="col"></th>
+                  <th scope="col" style={{ width: 36 }}><span className="sr-only">Include</span></th>
+                  <th scope="col" className="num" style={{ width: 44 }}>#</th>
+                  <th scope="col" style={{ minWidth: 190 }}>Candidate</th>
+                  <th scope="col" style={{ minWidth: 190 }}>Evidence score · range · coverage</th>
+                  <th scope="col">Proposal</th>
+                  <th scope="col">Needs attention</th>
+                  <th scope="col"><span className="sr-only">Evidence</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -202,10 +205,10 @@ export function ShortlistPage() {
                       <td>
                         <input type="checkbox" checked={sel} onChange={() => toggle(r.application_id)} aria-label={`Include ${r.candidate_name}`} />
                       </td>
-                      <td>{r.position ?? "-"}{r.near_tie && <span title="Near-equal to a neighbour"> ≈</span>}</td>
+                      <td className="num mono">{r.position ?? "-"}{r.near_tie && <span title="Near-equal to a neighbour - the difference is not meaningful" aria-label="near tie"> ≈</span>}</td>
                       <td>
                         <strong>{r.candidate_name}</strong>
-                        <div className="small muted clamp" title={r.summary}>{r.summary}</div>
+                        {r.contact_status !== "ok" && <div><Badge tone="warn">contact review</Badge></div>}
                         {outside && (
                           <input
                             aria-label={`Override reason for ${r.candidate_name}`}
@@ -216,21 +219,27 @@ export function ShortlistPage() {
                           />
                         )}
                       </td>
-                      <td style={{ minWidth: 140 }}>
-                        <ScoreBar lower={r.lower} upper={r.upper} />
-                        <span className="small">{fmt.num(r.lower)}</span>
+                      <td>
+                        {r.lower !== null ? (
+                          <>
+                            <div className="row" style={{ gap: 10, flexWrap: "nowrap" }}>
+                              <strong className="mono" style={{ minWidth: 34 }}>{fmt.num(r.lower)}</strong>
+                              <ScoreBar lower={r.lower} upper={r.upper} />
+                            </div>
+                            <div className="small muted mono">up to {fmt.num(r.upper)} · {fmt.num(r.coverage, 0)}% covered</div>
+                          </>
+                        ) : (
+                          <StateBadge state={r.evaluation_state} />
+                        )}
                       </td>
                       <td className="small">
-                        {r.lower !== null ? <>{fmt.num(r.lower)}–{fmt.num(r.upper)} · {fmt.num(r.coverage, 0)}%</> : "-"}
-                        {r.unresolved_required?.length > 0 && <div><Badge tone="warn">unknown required: {r.unresolved_required.map((x: string) => label.get(x) ?? x).join(", ")}</Badge></div>}
+                        {proposed.has(r.application_id) ? "Proposed" : <span className="muted">Not proposed</span>}
+                        {approved?.members.some((m: any) => m.application_id === r.application_id) && <div><StateBadge state="human_approved" label="on approved list" /></div>}
                       </td>
-                      <td>
-                        {proposed.has(r.application_id) ? <Badge tone="info">proposed</Badge> : <Badge>not proposed</Badge>}{" "}
-                        {approved?.members.some((m: any) => m.application_id === r.application_id) && <Badge tone="good">approved</Badge>}
-                        <div><StateBadge state={r.evaluation_state} /> {r.evaluation_source && <Badge tone={r.evaluation_source === "live" ? "ai" : "neutral"}>{r.evaluation_source}</Badge>}</div>
-                        {r.contact_status !== "ok" && <Badge tone="warn">contact review</Badge>}
+                      <td className="small" style={{ maxWidth: 300 }}>
+                        {r.unresolved_required?.length > 0 && <div>Unknown required: {r.unresolved_required.map((x: string) => label.get(x) ?? x).join(", ")}</div>}
+                        {review.has(r.application_id) && <div className="muted">{r.review_reasons.filter((x: string) => !x.startsWith("required criteria")).join("; ")}</div>}
                       </td>
-                      <td className="small">{review.has(r.application_id) ? r.review_reasons.join("; ") : ""}</td>
                       <td><button className="btn btn-small" onClick={() => setDrawer(r.application_id)}>Evidence</button></td>
                     </tr>
                   );

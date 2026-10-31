@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, ApiError, fmt } from "../../api";
 import { useAuth } from "../../auth";
 import { Badge, Empty, ErrorBox, Loading, Notice, Stat, StateBadge } from "../../components/ui";
+import { Icon } from "../../components/Icon";
 
 type Tab = "overview" | "users" | "audit" | "approvals";
 
@@ -169,7 +170,7 @@ function Users() {
                           {u.jobs.map((j: any) => (
                             <span key={j.id} className="row">
                               {j.title}
-                              <button className="btn btn-ghost btn-small" aria-label={`Unassign ${j.title}`} onClick={() => call(() => api(`/api/supervisor/assignments?user_id=${u.id}&job_id=${j.id}`, { method: "DELETE" }), "Assignment removed.")}>✕</button>
+                              <button className="btn btn-ghost btn-small" aria-label={`Unassign ${j.title}`} onClick={() => call(() => api(`/api/supervisor/assignments?user_id=${u.id}&job_id=${j.id}`, { method: "DELETE" }), "Assignment removed.")}><Icon name="close" /></button>
                             </span>
                           ))}
                           <select aria-label={`Assign job to ${u.full_name}`} value="" onChange={(e) => e.target.value && call(() => api("/api/supervisor/assignments", { body: { user_id: u.id, job_id: e.target.value } }), "Assignment added.")}>
