@@ -1,0 +1,13 @@
+.env
+backend/.env
+**/.venv/
+__pycache__/
+*.pyc
+backend/var/
+var/
+node_modules/
+frontend/dist/
+.pytest_cache/
+frontend/test-results/
+frontend/playwright-report/
+.DS_Store
