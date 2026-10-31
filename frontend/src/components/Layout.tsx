@@ -4,21 +4,15 @@ import { PRODUCT_NAME } from "../config";
 
 function ModeBanner() {
   const { status, user } = useAuth();
-  if (!status) return null;
-  const staff = user && user.role !== "candidate";
+  if (!status || !user || user.role === "candidate") return null;
   return (
     <div className="banner" role="note">
-      <span>
-        <strong>Fictional hackathon data only.</strong> Do not upload real personal information.
+      <span className={`mode mode-${status.ai_mode}`} title="Changed only by an explicit supervisor action">
+        AI mode: <strong>{status.ai_mode === "live" ? `LIVE · ${status.model_id}` : "REPLAY · synthetic, not an LLM"}</strong>
+        {status.ai_mode === "live" && status.daily_budget !== undefined && (
+          <> · {status.live_calls_today}/{status.daily_budget} calls today</>
+        )}
       </span>
-      {staff && (
-        <span className={`mode mode-${status.ai_mode}`} title="Changed only by an explicit supervisor action">
-          AI mode: <strong>{status.ai_mode === "live" ? `LIVE · ${status.model_id}` : "REPLAY · synthetic, not an LLM"}</strong>
-          {status.ai_mode === "live" && status.daily_budget !== undefined && (
-            <> · {status.live_calls_today}/{status.daily_budget} calls today</>
-          )}
-        </span>
-      )}
     </div>
   );
 }
@@ -92,9 +86,6 @@ export default function Layout({ area }: { area: "public" | "hr" | "supervisor" 
       <main id="main">
         <Outlet />
       </main>
-      <footer className="footer muted small">
-        {PRODUCT_NAME} prototype · The agent executes, the human decides about people. · All people, companies and CVs are fictional.
-      </footer>
     </div>
   );
 }
