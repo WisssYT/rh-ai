@@ -17,16 +17,17 @@ export default function RecruiterLayout() {
   const nav = useNavigate();
   const loc = useLocation();
   const [jobs, setJobs] = useState<JobLink[]>([]);
-  const [pending, setPending] = useState<number | null>(null);
+  const [counts, setCounts] = useState<{ approvals: number; review: number; inbox: number; followups: number } | null>(null);
 
   // Refresh sidebar context on navigation (cheap; keeps counts honest after actions).
   useEffect(() => {
     if (!user || user.role === "candidate") return;
     api("/api/hr/jobs").then((r) => setJobs(r.items)).catch(() => setJobs([]));
-    api("/api/hr/approvals")
-      .then((r) => setPending(r.email_drafts.filter((d: any) => d.status === "draft").length + r.booking_requests.length + r.shortlist_drafts.length))
-      .catch(() => setPending(null));
+    api("/api/hr/nav-counts").then(setCounts).catch(() => setCounts(null));
   }, [user, loc.pathname]);
+
+  const count = (n: number | undefined, label: string, quiet = true) =>
+    n ? <span className={`rx-count${quiet ? " rx-count-quiet" : ""}`} aria-label={`${n} ${label}`}>{n}</span> : null;
 
   return (
     <div className="rx">
@@ -38,12 +39,26 @@ export default function RecruiterLayout() {
         </NavLink>
         <nav>
           <div className="rx-nav-group">
+            <NavLink to="/hr/dashboard"><Icon name="chart" />Dashboard</NavLink>
             <NavLink to="/hr" end><Icon name="grid" />Overview</NavLink>
-            <NavLink to="/hr/approvals">
-              <Icon name="inbox" />Approvals
-              {pending ? <span className="rx-count" aria-label={`${pending} waiting`}>{pending}</span> : null}
-            </NavLink>
+            <NavLink to="/hr/candidates"><Icon name="people" />Candidates</NavLink>
+          </div>
+          <div className="rx-nav-group">
+            <div className="rx-nav-label">Act</div>
+            <NavLink to="/hr/approvals"><Icon name="inbox" />Approvals{count(counts?.approvals, "waiting", false)}</NavLink>
+            <NavLink to="/hr/review"><Icon name="flag" />Review queue{count(counts?.review, "open")}</NavLink>
+            <NavLink to="/hr/inbox"><Icon name="mail" />Inbox brief{count(counts?.inbox, "open")}</NavLink>
+            <NavLink to="/hr/followups"><Icon name="repeat" />Follow-ups{count(counts?.followups, "due")}</NavLink>
+          </div>
+          <div className="rx-nav-group">
+            <div className="rx-nav-label">Interviews</div>
             <NavLink to="/hr/calendar"><Icon name="calendar" />Calendar</NavLink>
+            <NavLink to="/hr/interviews"><Icon name="chat" />Interviews</NavLink>
+          </div>
+          <div className="rx-nav-group">
+            <div className="rx-nav-label">Library</div>
+            <NavLink to="/hr/templates"><Icon name="template" />Templates</NavLink>
+            <NavLink to="/hr/reports"><Icon name="report" />Reports</NavLink>
           </div>
           <div className="rx-nav-group">
             <div className="rx-nav-label">Jobs</div>

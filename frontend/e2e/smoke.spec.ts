@@ -17,6 +17,7 @@ test("candidate applies, HR analyses, approves shortlist and invitation, candida
   // 1. Candidate submits a PDF
   const cand = await (await browser.newContext()).newPage();
   await login(cand, "/login", "demo.candidate@example.test", CAND_PW);
+  const T0 = Date.now() - 2000; // only count emails from this run (a reused Mailpit keeps older invitations)
   await cand.goto("/jobs");
   await cand.getByRole("link", { name: /Backend Developer \(Python\)/ }).click();
   await cand.getByLabel(/CV \(PDF/).setInputFiles("e2e/fixtures/dana_cv.pdf");
@@ -62,7 +63,8 @@ test("candidate applies, HR analyses, approves shortlist and invitation, candida
   await card.getByRole("button", { name: "Approve & send this exact message" }).click();
   await expect.poll(async () => {
     const r = await hr.request.get("http://localhost:8025/api/v1/search?query=to:amira.bensalah@example.test");
-    return (await r.json()).messages_count;
+    const j = await r.json();
+    return j.messages.filter((m: any) => Date.parse(m.Created) > T0).length;
   }, { timeout: 30_000 }).toBeGreaterThan(0);
 
   // 5. Candidate opens the invitation (link from the email) and requests a slot

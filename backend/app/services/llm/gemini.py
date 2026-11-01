@@ -92,3 +92,6 @@ class GeminiProvider:
 
     def draft_invitation(self, req: DraftRequest) -> ProviderResponse:
         return self._call(req.system_prompt, req.user_prompt, req.response_schema, 1024)
+
+    def structured(self, task: str, req: DraftRequest) -> ProviderResponse:
+        return self._call(req.system_prompt, req.user_prompt, req.response_schema, 1536)

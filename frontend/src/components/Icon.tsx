@@ -16,6 +16,13 @@ const PATHS: Record<string, string> = {
   clock: "M10 17.5a7.5 7.5 0 100-15 7.5 7.5 0 000 15zM10 6v4l3 2",
   warn: "M10 3l8 14H2zM10 8v4M10 14.5v.5",
   dot: "M10 11a1 1 0 100-2 1 1 0 000 2z",
+  chart: "M3 16.5h14M5.5 14V9.5M9 14V5.5M12.5 14V11M16 14V7.5",
+  flag: "M5 17.5V3M5 3.5h9.5l-2 3.25 2 3.25H5",
+  mail: "M3 5h14v10H3zM3.5 5.5l6.5 5 6.5-5",
+  repeat: "M4.5 8.5a5.5 5.5 0 019.7-2.8L16 7.5M16 3.5v4h-4M15.5 11.5a5.5 5.5 0 01-9.7 2.8L4 12.5M4 16.5v-4h4",
+  template: "M4 3h12v14H4zM7 7h6M7 10h6M7 13h3",
+  report: "M5 2.5h10v15H5zM8 13.5V11M10.5 13.5V8M13 13.5V10",
+  chat: "M3.5 4h13v9h-7l-4 3.5V13h-2z",
 };
 
 export function Icon({ name, label, className = "icon" }: { name: keyof typeof PATHS | string; label?: string; className?: string }) {

@@ -82,7 +82,7 @@ def compose(draft: EmailDraft, db: Session) -> dict:
     s = get_settings()
     c = company(db)
     footer = ""
-    if draft.kind == "invitation" and draft.invitation_id:
+    if draft.kind in ("invitation", "reminder") and draft.invitation_id:
         inv = db.get(Invitation, draft.invitation_id)
         footer = (
             f"\n\nChoose an interview time (log in with your candidate account):\n{draft.link_url}\n"
@@ -90,7 +90,7 @@ def compose(draft: EmailDraft, db: Session) -> dict:
             f"Questions? Reply to {c.contact_email}.\n\n"
             f"-- {c.name} recruiting team. Fictional hackathon demo message."
         )
-    elif draft.kind == "confirmation":
+    elif draft.kind in ("confirmation", "reply", "decline"):
         footer = (f"\n\nQuestions? Reply to {c.contact_email}.\n\n"
                   f"-- {c.name} recruiting team. Fictional hackathon demo message.")
     return {
@@ -130,7 +130,7 @@ def current_context_problem(db: Session, draft: EmailDraft) -> str | None:
     app = db.get(Application, draft.application_id)
     if app.contact_status != "ok" or not app.cv_email or app.cv_email != draft.to_email:
         return "Recipient contact data changed or needs review"
-    if draft.kind == "invitation":
+    if draft.kind in ("invitation", "reminder"):
         inv = db.get(Invitation, draft.invitation_id)
         sl = approved_shortlist(db, app.job_id)
         if sl is None or app.id not in {m["application_id"] for m in sl.members}:
@@ -143,6 +143,15 @@ def current_context_problem(db: Session, draft: EmailDraft) -> str | None:
             return "Booking destination does not match configuration"
         if invitation_context_digest(db, app, inv) != draft.context_digest:
             return "Shortlist, contact or invitation details changed since the draft was prepared"
+        if draft.kind == "reminder" and has_active_booking(db, inv.id):
+            return "The candidate has already requested or booked a time - no reminder needed"
+    elif draft.kind in ("reply", "decline"):
+        from .comms import application_context_digest
+
+        if draft.kind == "decline" and app.status != "submitted":
+            return "Application is no longer active"
+        if application_context_digest(db, app, draft.source_message_id) != draft.context_digest:
+            return "Application, contact or message details changed since the draft was prepared"
     else:
         iv = db.get(Interview, draft.interview_id)
         if iv is None or iv.status != "confirmed":
@@ -159,16 +168,21 @@ def _first_name(full: str) -> str:
     return (full.split() or ["there"])[0][:40]
 
 
-def _template_invitation(ctx: dict) -> dict:
-    return {
-        "subject": f"Interview invitation - {ctx['job_title']}",
-        "body": (
-            f"Hello {ctx['candidate_first_name']},\n\n"
-            f"Thank you for your application for the {ctx['job_title']} position at {ctx['company_name']}. "
-            f"We would like to invite you to an interview to talk about your experience and the role.\n\n"
-            f"{ctx['interview_instructions']}"
-        ).strip(),
-    }
+def has_active_booking(db: Session, invitation_id: str) -> bool:
+    from ..models import BookingRequest
+
+    return db.scalar(select(BookingRequest.id).where(BookingRequest.invitation_id == invitation_id,
+                                                     BookingRequest.status.in_(("requested", "confirmed")))) is not None
+
+
+def _template_invitation(db: Session, ctx: dict) -> dict:
+    """Company default invitation template (staff-authored) or the built-in wording."""
+    from .templates import render_default
+
+    return render_default(db, "invitation", {
+        "first_name": ctx["candidate_first_name"], "job_title": ctx["job_title"],
+        "company_name": ctx["company_name"], "interview_instructions": ctx["interview_instructions"],
+    })
 
 
 def prepare_invitation_drafts(
@@ -216,7 +230,7 @@ def prepare_invitation_drafts(
             "interview_instructions": c.interview_instructions,
         }
         gen_label = "template"
-        content = _template_invitation(ctx)
+        content = _template_invitation(db, ctx)
         if generator == "ai":
             try:
                 content, gen_label = _ai_draft(db, mode, ctx), f"ai_{mode}"
@@ -347,6 +361,12 @@ def approve_and_send(db: Session, p: Principal, draft_id: str, revision: int, re
         return {"outbox_id": ob.id, "status": "approved_queued", "duplicate": True}
     draft.status = "approved_queued"
     draft.approved_by, draft.approved_at, draft.approved_digest = p.id, utcnow(), current
+    if draft.source_message_id:
+        from ..models import InboxMessage
+
+        msg = db.get(InboxMessage, draft.source_message_id)
+        if msg is not None and msg.status == "open":
+            msg.status, msg.handled_by, msg.handled_at = "replied", p.id, utcnow()
     db.add(Approval(action=f"approve_send_{draft.kind}", target_type="email_draft", target_id=draft.id,
                     target_revision=draft.revision, digest=current, approver_id=p.id, approver_role=p.role))
     audit(db, p, "email.approved_and_queued", "email_draft", draft.id, job_id=draft.job_id,

@@ -15,7 +15,7 @@ from .config import get_settings
 from .db import get_db
 from .deps import Principal, optional_principal
 from .models import Company
-from .routers import auth, candidate, hr_jobs, hr_ops, supervisor
+from .routers import auth, candidate, hr_jobs, hr_ops, hr_workbench, supervisor
 from .security import CSRF_COOKIE, CSRF_HEADER, SESSION_COOKIE, lookup_session
 from .services import llm
 
@@ -124,7 +124,7 @@ def create_app() -> FastAPI:
         return JSONResponse({"detail": "Internal error", "correlation_id": getattr(request.state, "correlation_id", None)},
                             status_code=500)
 
-    for r in (auth.router, candidate.router, hr_jobs.router, hr_ops.router, supervisor.router):
+    for r in (auth.router, candidate.router, hr_jobs.router, hr_ops.router, hr_workbench.router, supervisor.router):
         app.include_router(r)
 
     @app.get("/api/system/status", tags=["system"])

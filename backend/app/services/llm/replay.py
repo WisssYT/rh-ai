@@ -123,3 +123,76 @@ class ReplayProvider:
         )
         out = {"subject": f"Interview invitation - {ctx['job_title']}", "body": body}
         return ProviderResponse(text=json.dumps(out), model_id=self.model_id, latency_ms=1, usage=Usage())
+
+    # ---- generic structured tasks (synthetic, deterministic) ------------------------------
+
+    def structured(self, task: str, req: DraftRequest) -> ProviderResponse:
+        fn = {"triage": _replay_triage, "reply": _replay_reply, "kit": _replay_kit}.get(task)
+        if fn is None:
+            raise ValueError(f"replay has no task {task}")
+        return ProviderResponse(text=json.dumps(fn(req.context)), model_id=self.model_id, latency_ms=1, usage=Usage())
+
+
+_TRIAGE_RULES = [
+    # (category, urgency, needs_human, pattern)
+    ("withdrawal", "high", True, r"\b(withdraw|no longer interested|accepted another offer)\b"),
+    ("scheduling", "high", True, r"\b(reschedul\w*|another time|can'?t make|cannot attend|move (my|the) interview|different (day|slot|time))\b"),
+    ("status_question", "normal", True, r"\b(status|any news|heard back|update on my application|next steps?)\b"),
+    ("candidate_question", "normal", True, r"\b(salary|remote|visa|relocat\w*|benefits?|question|hybrid|start date)\b"),
+    ("newsletter", "low", False, r"\b(newsletter|unsubscribe|webinar|digest|this week in)\b"),
+    ("vendor", "low", False, r"\b(agency|our services|partnership|pricing|demo of our|sourcing solution|offer you)\b"),
+]
+
+
+def _first_words(text: str, n: int = 26) -> str:
+    words = re.sub(r"\s+", " ", text).strip().split(" ")
+    out = " ".join(words[:n])
+    return out + ("…" if len(words) > n else "")
+
+
+def _replay_triage(ctx: dict) -> dict:
+    text = f"{ctx.get('subject', '')}\n{ctx.get('body', '')}"
+    low = text.lower()
+    flags: list[str] = []
+    if detect_injection(text):
+        flags.append("possible_prompt_injection")
+        cat, urg, human = "suspicious", "high", True
+    else:
+        cat, urg, human = ("internal", "normal", True) if ctx.get("from_internal") else ("other", "normal", True)
+        if not ctx.get("from_internal"):  # colleagues are never "candidates", whatever words they use
+            for c, u, h, pat in _TRIAGE_RULES:
+                if re.search(pat, low):
+                    cat, urg, human = c, u, h
+                    break
+    if re.search(r"\b(urgent|asap|today|tomorrow)\b", low) and cat not in ("newsletter", "vendor"):
+        urg = "high"
+    return {"category": cat, "urgency": urg, "needs_human": human,
+            "summary": _first_words(ctx.get("body", "")), "flags": flags}
+
+
+def _replay_reply(ctx: dict) -> dict:
+    body = (
+        f"Hello {ctx['candidate_first_name']},\n\n"
+        f"Thank you for your message about the {ctx['job_title']} position at {ctx['company_name']}. "
+        f"{ctx['stage_sentence']}\n\n"
+        "If your question needs a personal answer from the team, a recruiter will follow up with you directly."
+    )
+    return {"subject": f"Re: {ctx['subject']}"[:150], "body": body}
+
+
+_KIT_TEMPLATES = {
+    "unknown": "Your CV doesn't mention {label}. Can you walk us through a time you worked on it, and what your role was?",
+    "depth": "You mention: “{quote}”. How far did that go - was it used in production, and which parts did you own?",
+    "verify": "Tell us more about “{quote}”. What was the hardest problem, and how did you know it worked?",
+}
+
+
+def kit_question(item: dict) -> str:
+    quote = item.get("context", "")
+    if len(quote) > 90:
+        quote = quote[:90].rsplit(" ", 1)[0] + "…"
+    return _KIT_TEMPLATES[item["focus"]].format(label=item["label"].lower(), quote=quote)
+
+
+def _replay_kit(ctx: dict) -> dict:
+    return {"questions": [{"criterion_id": it["criterion_id"], "question": kit_question(it)} for it in ctx["items"]]}

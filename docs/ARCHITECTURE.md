@@ -45,6 +45,12 @@ flowchart LR
 `weights_revisions`, `resume_documents`, `parse_cache`, `applications`, `analysis_runs`, `analysis_tasks`,
 `ai_call_log`, `evaluations`, `shortlists` (revisioned snapshots), `invitations`, `email_drafts`, `outbox`,
 `approvals`, `interview_slots`, `booking_requests`, `interviews`, `system_settings`, `audit_events`.
+HR workbench (migration `0002`): `inbox_messages` (untrusted inbound mail, deterministic link to an
+application, provisional triage labels), `email_templates`, `interview_kits` (revisioned, provisional),
+`interview_scorecards` (one per interviewer; submit = approval), `review_acks`; `email_drafts.source_message_id`
+links a reply to the message it answers. Every small AI task (triage, reply, kit) goes through
+`services/assist.py`: operator mode, daily budget, strict schema (extra fields rejected), and an `ai_call_log`
+row committed in its own transaction so a failed request still counts against the budget.
 
 Integrity constraints that matter:
 

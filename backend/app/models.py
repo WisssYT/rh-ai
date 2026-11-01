@@ -322,11 +322,13 @@ class Invitation(Base):
 class EmailDraft(Base):
     __tablename__ = "email_drafts"
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
-    kind: Mapped[str] = mapped_column(String(20))  # invitation | confirmation
+    kind: Mapped[str] = mapped_column(String(20))  # invitation | confirmation | reminder | reply | decline
     job_id: Mapped[str] = mapped_column(ForeignKey("jobs.id"), index=True)
     application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
     invitation_id: Mapped[str | None] = mapped_column(ForeignKey("invitations.id"), nullable=True)
     interview_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # reply drafts: the inbound message being answered (the recipient never comes from that message)
+    source_message_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
     to_email: Mapped[str] = mapped_column(String(254))
     subject: Mapped[str] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text)
@@ -457,3 +459,103 @@ class AuditEvent(Base):
     outcome: Mapped[str] = mapped_column(String(30), default="ok")
     correlation_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     details: Mapped[dict] = mapped_column(JSONType, default=dict)
+
+
+# ---- HR workbench: inbox, templates, interview kits, scorecards, review acknowledgements -----------
+
+
+class InboxMessage(Base):
+    """Inbound message to the HR mailbox (fictional). Body is UNTRUSTED content.
+
+    Triage fields are provisional AI output produced only after an explicit "prepare brief" click.
+    """
+
+    __tablename__ = "inbox_messages"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    received_at: Mapped[datetime] = TS(default=utcnow, index=True)
+    from_email: Mapped[str] = mapped_column(String(254), index=True)
+    from_name: Mapped[str] = mapped_column(String(200), default="")
+    subject: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    channel: Mapped[str] = mapped_column(String(20), default="email")  # email | candidate_portal
+    # deterministic link to an application (sender == candidate account); scopes visibility
+    application_id: Mapped[str | None] = mapped_column(ForeignKey("applications.id"), nullable=True, index=True)
+    job_id: Mapped[str | None] = mapped_column(ForeignKey("jobs.id"), nullable=True, index=True)
+    category: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    urgency: Mapped[str | None] = mapped_column(String(10), nullable=True)  # high | normal | low
+    needs_human: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    summary: Mapped[str] = mapped_column(String(400), default="")
+    flags: Mapped[list] = mapped_column(JSONType, default=list)
+    triage_source: Mapped[str | None] = mapped_column(String(20), nullable=True)  # live | replay
+    triage_model: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    triaged_at: Mapped[datetime | None] = TS(nullable=True)
+    triaged_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status: Mapped[str] = mapped_column(String(20), default="open")  # open | replied | archived
+    handled_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    handled_at: Mapped[datetime | None] = TS(nullable=True)
+
+
+class EmailTemplate(Base):
+    """Staff-authored, company-wide message templates with a fixed placeholder whitelist."""
+
+    __tablename__ = "email_templates"
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    kind: Mapped[str] = mapped_column(String(20), index=True)  # invitation | reminder | reply | decline
+    name: Mapped[str] = mapped_column(String(120))
+    subject: Mapped[str] = mapped_column(String(200))
+    body: Mapped[str] = mapped_column(Text)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_by: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = TS(default=utcnow)
+    updated_by: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    updated_at: Mapped[datetime] = TS(default=utcnow)
+
+
+class InterviewKit(Base):
+    """Provisional interview questions aimed at a candidate's unknowns and unverified claims."""
+
+    __tablename__ = "interview_kits"
+    __table_args__ = (UniqueConstraint("interview_id", "revision"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    interview_id: Mapped[str] = mapped_column(ForeignKey("interviews.id", ondelete="CASCADE"), index=True)
+    application_id: Mapped[str] = mapped_column(ForeignKey("applications.id"), index=True)
+    evaluation_id: Mapped[str] = mapped_column(String(32))
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    items: Mapped[list] = mapped_column(JSONType, default=list)
+    source: Mapped[str] = mapped_column(String(20))  # live | replay | template
+    model_id: Mapped[str] = mapped_column(String(80), default="")
+    created_by: Mapped[str] = mapped_column(String(32))
+    created_at: Mapped[datetime] = TS(default=utcnow)
+
+
+class InterviewScorecard(Base):
+    """Interviewer's own structured notes. Submitting is an explicit, audited human record."""
+
+    __tablename__ = "interview_scorecards"
+    __table_args__ = (UniqueConstraint("interview_id", "interviewer_id"),)
+    id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
+    interview_id: Mapped[str] = mapped_column(ForeignKey("interviews.id", ondelete="CASCADE"), index=True)
+    interviewer_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
+    ratings: Mapped[dict] = mapped_column(JSONType, default=dict)  # criterion_id -> 0..4 | null
+    notes: Mapped[dict] = mapped_column(JSONType, default=dict)  # criterion_id -> text
+    summary: Mapped[str] = mapped_column(Text, default="")
+    recommendation: Mapped[str] = mapped_column(String(20), default="undecided")
+    status: Mapped[str] = mapped_column(String(20), default="draft")  # draft | submitted
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+    digest: Mapped[str] = mapped_column(String(64), default="")
+    updated_at: Mapped[datetime] = TS(default=utcnow)
+    submitted_at: Mapped[datetime | None] = TS(nullable=True)
+
+
+class ReviewAck(Base):
+    """A human acknowledged a review-queue item (it changes no evaluation or decision)."""
+
+    __tablename__ = "review_acks"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    item_key: Mapped[str] = mapped_column(String(160), unique=True)
+    kind: Mapped[str] = mapped_column(String(40))
+    target_id: Mapped[str] = mapped_column(String(64), index=True)
+    job_id: Mapped[str | None] = mapped_column(String(32), nullable=True, index=True)
+    note: Mapped[str] = mapped_column(String(300), default="")
+    acked_by: Mapped[str] = mapped_column(String(32))
+    acked_at: Mapped[datetime] = TS(default=utcnow)

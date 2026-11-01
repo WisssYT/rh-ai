@@ -24,8 +24,10 @@ A ready-made PDF for the live upload: `frontend/e2e/fixtures/dana_cv.pdf`.
 
 Seeded state: Backend job has 16 submitted, unanalysed applications (incl. injection, scanned, mismatched
 email, overlapping dates). Data Analyst job is pre-progressed **in REPLAY mode** (labelled): approved
-shortlist, two invitations sent, one pending booking request, one confirmed interview with a confirmation
-draft waiting for approval.
+shortlist, three invitations sent (one still without a requested time three days later → *Follow-ups*), one
+pending booking request, one confirmed interview with a confirmation draft waiting for approval. The HR inbox
+holds ten fictional messages (status questions, a reschedule, a withdrawal, an agency pitch, a newsletter, an
+IT request and one prompt-injection email) ready for *Inbox brief*.
 
 If you have a free-tier key and want a real AI moment: set `GEMINI_API_KEY`, restart API + worker, and in
 **C** → Supervisor → Overview → "Switch to live". Then in step 2 authorize only 1-3 applications.
@@ -78,6 +80,16 @@ recorded with their name and the exact content they approved."
 3. Back on the run card: provider calls/tokens/prefix-cache tokens (live) or "replay generations" (replay),
    and **saved-evaluation reuse**. Close: "Faster, evidence-backed screening with people in charge -
    and honest about what the AI did and didn't do."
+
+### Optional workbench tour (if you have extra time, or for Q&A)
+1. *Dashboard*: funnel, score spread (click a dot → evidence), coverage grid; "0 model calls" in the header.
+   Leave it open while an analysis run is going - it refreshes live.
+2. *Inbox brief* → **Prepare brief** → Omar's "Urgent" mail is marked suspicious and AI reply is blocked;
+   Amira's status question → **Draft reply with AI** → "Grounded only in" chips, recipient = verified address.
+3. *Follow-ups*: Samir has waited 3 days → prepare reminder → tick "I reviewed…" → approve the listed batch.
+4. *Interviews* → Rania → **Prepare with AI**: questions aimed at unknowns/claims with the quote they came
+   from; fill a scorecard and submit (final, recorded).
+5. *Reports* → Data Analyst → printable report with the human-approval stamp.
 
 ### Fallbacks
 * No key / quota exhausted: stay in replay mode; it is labelled everywhere. Never claim replay output is live.

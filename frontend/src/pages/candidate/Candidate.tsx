@@ -218,6 +218,7 @@ export function CandidateApplication() {
               </form>
             </div>
           )}
+          <MessageTeam applicationId={app.id} />
           {app.status === "submitted" && (
             <div className="side-block">
               <h3>Withdraw</h3>
@@ -227,6 +228,53 @@ export function CandidateApplication() {
           )}
         </aside>
       </div>
+    </div>
+  );
+}
+
+function MessageTeam({ applicationId }: { applicationId: string }) {
+  const { status } = useAuth();
+  const [items, setItems] = useState<any[]>([]);
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const load = useCallback(() => {
+    api(`/api/candidate/applications/${applicationId}/messages`).then((r) => setItems(r.items)).catch(() => setItems([]));
+  }, [applicationId]);
+  useEffect(load, [load]);
+  async function send(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`/api/candidate/applications/${applicationId}/messages`, { body: { subject, body } });
+      setSubject("");
+      setBody("");
+      setSent(true);
+      load();
+    } catch (err) {
+      setError((err as ApiError).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="side-block">
+      <h3>Message the recruiting team</h3>
+      {sent && <Notice tone="good"><span>Sent. A person reads every message; any reply comes by email.</span></Notice>}
+      <form onSubmit={send}>
+        <div className="field"><label htmlFor="msg-subject">Subject</label><input id="msg-subject" value={subject} onChange={(e) => setSubject(e.target.value)} minLength={3} maxLength={150} required /></div>
+        <div className="field"><label htmlFor="msg-body">Message</label><textarea id="msg-body" value={body} onChange={(e) => setBody(e.target.value)} minLength={10} maxLength={3000} required style={{ minHeight: 100 }} /></div>
+        <ErrorBox error={error} />
+        <button className="btn btn-small" disabled={busy}>{busy ? "Sending…" : "Send message"}</button>
+      </form>
+      {items.length > 0 && (
+        <ul className="small" style={{ listStyle: "none", padding: 0, margin: "12px 0 0" }}>
+          {items.map((m) => <li key={m.id} style={{ padding: "4px 0", borderTop: "1px solid var(--rule)" }}>{m.subject} <span className="muted">· {fmt.dateTime(m.received_at, status?.timezone)} · {m.answered ? "answered" : "received"}</span></li>)}
+        </ul>
+      )}
     </div>
   );
 }

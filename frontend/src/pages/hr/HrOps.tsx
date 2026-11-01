@@ -311,7 +311,9 @@ export function CalendarPage() {
 
 // ---- Approvals -----------------------------------------------------------------------
 
-function DraftCard({ d, tz, onChange }: { d: any; tz: string; onChange: () => void }) {
+const KIND_LABEL: Record<string, string> = { invitation: "Invitation", confirmation: "Confirmation", reminder: "Reminder", reply: "Reply", decline: "Decline letter" };
+
+export function DraftCard({ d, tz, onChange, sources }: { d: any; tz: string; onChange: () => void; sources?: string[] }) {
   const [edit, setEdit] = useState(false);
   const [subject, setSubject] = useState(d.preview.subject);
   const [body, setBody] = useState("");
@@ -335,13 +337,19 @@ function DraftCard({ d, tz, onChange }: { d: any; tz: string; onChange: () => vo
     <div className="card">
       <div className="spread">
         <h2>
-          {d.kind === "invitation" ? "Invitation" : "Confirmation"} · {d.candidate.name} <StateBadge state={d.status} />
+          {KIND_LABEL[d.kind] ?? d.kind} · {d.candidate.name} <StateBadge state={d.status} />
         </h2>
         <span className="small muted">
           {d.job.title} · revision {d.revision} · <Badge tone={d.generator.startsWith("ai_live") ? "ai" : "neutral"}>{d.generator === "ai_live" ? "AI draft (live LLM)" : d.generator === "ai_replay" ? "replay draft (synthetic)" : d.generator === "edited" ? "edited by human" : "template"}</Badge>
         </span>
       </div>
       {d.blocking_problem && <Notice tone="warn">Cannot be approved: {d.blocking_problem}</Notice>}
+      {sources && sources.length > 0 && (
+        <div className="chips" aria-label="Facts the draft was allowed to use">
+          <span className="small muted">Grounded only in:</span>
+          {sources.map((x) => <span key={x} className="chip">{x}</span>)}
+        </div>
+      )}
       <div className="email-preview">
         <dl>
           <dt>From</dt><dd>{d.preview.from}</dd>
@@ -353,7 +361,7 @@ function DraftCard({ d, tz, onChange }: { d: any; tz: string; onChange: () => vo
         {edit && (
           <div style={{ padding: 12 }}>
             <div className="field"><label htmlFor={`sub${d.id}`}>Subject</label><input id={`sub${d.id}`} value={subject} onChange={(e) => setSubject(e.target.value)} /></div>
-            <div className="field"><label htmlFor={`body${d.id}`}>Message (the booking link, expiry and footer are appended automatically)</label><textarea id={`body${d.id}`} value={body} onChange={(e) => setBody(e.target.value)} /></div>
+            <div className="field"><label htmlFor={`body${d.id}`}>Message ({d.preview.link_url ? "the booking link, expiry and footer are" : "the footer is"} appended automatically)</label><textarea id={`body${d.id}`} value={body} onChange={(e) => setBody(e.target.value)} /></div>
           </div>
         )}
       </div>

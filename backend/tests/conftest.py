@@ -191,6 +191,18 @@ class MockProvider:
                                 model_id=self.model_id, latency_ms=5, usage=self.usage)
 
 
+    def structured(self, task, req):
+        self.draft_calls += 1
+        self.requests.append(req)
+        if self.script:
+            out = self.script(req, self.draft_calls)
+            if isinstance(out, Exception):
+                raise out
+            return ProviderResponse(text=out, model_id=self.model_id, latency_ms=5, usage=self.usage)
+        r = ReplayProvider().structured(task, req)
+        return ProviderResponse(text=r.text, model_id=self.model_id, latency_ms=5, usage=self.usage)
+
+
 @pytest.fixture
 def db():
     s = SessionLocal()

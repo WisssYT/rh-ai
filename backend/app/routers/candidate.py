@@ -316,3 +316,48 @@ def change_password(body: PasswordIn, request: Request, p: Principal = Depends(r
     audit(db, p, "account.password_changed", "user", p.id)
     db.commit()
     return {"ok": True}
+
+
+# ---- messages to the recruiting team (land in the HR inbox as untrusted content) -------------------
+
+
+class MessageIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    subject: str = Field(min_length=3, max_length=150)
+    body: str = Field(min_length=10, max_length=3000)
+
+
+def _message_public(m) -> dict:
+    # Candidates see their own message and whether it was answered - never triage labels or AI notes.
+    return {"id": m.id, "subject": m.subject, "body": m.body, "received_at": m.received_at,
+            "answered": m.status == "replied"}
+
+
+@router.get("/candidate/applications/{application_id}/messages")
+def my_messages(application_id: str, p: Principal = Depends(require_candidate), db: Session = Depends(get_db)):
+    from ..models import InboxMessage
+
+    a = get_application_for_candidate(db, p, application_id)
+    rows = db.scalars(select(InboxMessage).where(InboxMessage.application_id == a.id,
+                                                 InboxMessage.from_email == p.user.email)
+                      .order_by(InboxMessage.received_at.desc()).limit(50))
+    return {"items": [_message_public(m) for m in rows]}
+
+
+@router.post("/candidate/applications/{application_id}/messages", status_code=201)
+def send_message(application_id: str, body: MessageIn, request: Request, p: Principal = Depends(require_candidate),
+                 db: Session = Depends(get_db)):
+    from ..models import InboxMessage
+    from ..services.comms import sanitize_inbound
+
+    limit(request, "candidate_message", 5, 3600, key_extra=p.id)
+    a = get_application_for_candidate(db, p, application_id)
+    m = InboxMessage(from_email=p.user.email, from_name=p.user.full_name, channel="candidate_portal",
+                     subject=sanitize_inbound(body.subject.replace("\n", " "), 150).strip(),
+                     body=sanitize_inbound(body.body, 3000), application_id=a.id, job_id=a.job_id)
+    db.add(m)
+    db.flush()
+    audit(db, p, "inbox.message_received", "inbox_message", m.id, job_id=a.job_id, details={"channel": "candidate_portal"})
+    db.commit()
+    return _message_public(m)
+

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import { Link, NavLink, useNavigate, useParams } from "react-router-dom";
+import { Link, NavLink, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, ApiError, fmt } from "../../api";
 import { useAuth } from "../../auth";
 import { Badge, Drawer, Empty, ErrorBox, Loading, Notice, ScoreBar, SkeletonRows, Stat, StateBadge } from "../../components/ui";
@@ -306,7 +306,17 @@ export function ApplicationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState({ q: "", parse_status: "", contact_status: "", evaluation: "", page: 1 });
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [drawer, setDrawer] = useState<string | null>(null);
+  const [sp, setSp] = useSearchParams();
+  const [drawer, setDrawerState] = useState<string | null>(sp.get("evidence"));
+  // Deep link from the dashboard / review queue: ?evidence=<application id>
+  const setDrawer = (v: string | null) => {
+    setDrawerState(v);
+    if (!v && sp.has("evidence")) {
+      const n = new URLSearchParams(sp);
+      n.delete("evidence");
+      setSp(n, { replace: true });
+    }
+  };
   const [confirming, setConfirming] = useState(false);
   const [runKey, setRunKey] = useState(0);
   const [busy, setBusy] = useState(false);

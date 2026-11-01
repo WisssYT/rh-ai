@@ -55,6 +55,11 @@ Open http://localhost:5173. The API docs (OpenAPI) are at http://localhost:8000/
 `SUPERVISOR_PASSWORD` (≥ 12 chars) in the environment and run `.venv/bin/python -m app.cli seed-supervisor`.
 That supervisor then creates recruiter accounts and job assignments in `/supervisor`.
 
+**Upgrading an existing database** to the HR workbench: `.venv/bin/alembic upgrade head` (adds inbox, templates,
+kits, scorecards, review acknowledgements), then optionally `.venv/bin/python -m app.cli seed-extras`.
+`reset-demo --yes && seed-demo` gives the full demo state (timeline history, a candidate waiting for a
+reminder).
+
 Other explicit commands (never run on startup):
 
 | Command | Purpose |
@@ -63,6 +68,7 @@ Other explicit commands (never run on startup):
 | `python -m app.cli generate-bulk --count 1000 --out ./var/bulk` | Generate 1,000 varied fictional CV PDFs |
 | `python -m app.cli import-bulk --dir ./var/bulk --job backend-developer-python` | Import them as applications through the real intake path |
 | `python -m app.cli smoke-live` | One tiny live Gemini call to verify key/model (uses 1 request of quota) |
+| `python -m app.cli seed-extras` | Add the fictional HR inbox messages and a reminder template (idempotent; also run by `seed-demo`) |
 | `python scripts/volume_benchmark.py --count 1000` | Measured intake + replay benchmark on a separate DB |
 
 ### Configuring a free Gemini key (no billing)
@@ -116,6 +122,38 @@ Email ownership is **not verified** in this prototype (registration only accepts
 13. Supervisor: staff accounts, role changes, activation, job assignments, AI mode switch, workflow overview,
     approvals log, audit timeline.
 
+### HR workbench (sidebar: Dashboard · Candidates · Act · Interviews · Library)
+14. **Dashboard** (`/hr/dashboard`): hand-drawn SVG charts in the brand style, refreshed live every 8 s while
+    the tab is visible - hiring funnel, score spread (evidence lower bound + hatched "could still add",
+    cutoff line, click → evidence drawer), applications over time with publication notes, evidence-coverage
+    grid (candidates × criteria, hatched = no evidence), security ledger, AI usage vs daily budget (live vs
+    replay, prefix-cache share only from provider metadata), calendar load and human decision speed.
+    Aggregates only - **0 model calls**, scoped to assigned jobs.
+15. **Candidates**: talent pool across jobs with stages derived only from recorded steps; drawer with
+    applications, messages, emails, interviews and audit timeline; **decline letter** drafting (template,
+    human decided, approval of the exact text required).
+16. **Review queue**: everything routed to a person - prompt-injection flags, rejected AI output, unreadable
+    documents, contact mismatches, suspicious inbound mail, delivery problems. "Mark reviewed" records who
+    looked (server only accepts keys it lists itself); it never changes a rating or decision.
+17. **Inbox brief** (Email Summary + Automatic Replies axes): fictional HR mailbox plus a "message the
+    recruiting team" form on the candidate's application page. An explicit "Prepare brief" click sorts open
+    messages by type and urgency and flags what needs a person (provisional labels; deterministic injection
+    check on top of the model). Reply drafts use **only that candidate's own file** (candidate-facing stage,
+    job, company facts), go to the **verified CV address - never an address from the inbound message**, are
+    blocked for AI when the message contains instructions, and need approval like any email.
+18. **Follow-ups**: invited candidates who have not requested a time; reminders are prepared on click from
+    the reminder template and approved as an **enumerated batch** (one approval record per exact draft
+    revision; a candidate who books in the meantime is refused). No automatic follow-ups.
+19. **Interviews**: confirmed interviews with an **interview kit** - one question per criterion aimed at
+    unknowns ("no evidence"), thin evidence or claims to verify, each shown with the verified quote it came
+    from and the rubric's anchor 4. The model writes wording only and never sees name or contact data.
+    **Scorecards** per interviewer (0-4 per criterion, notes, recommendation); submitting is final and
+    recorded as an approval.
+20. **Templates**: company-wide wording for invitation, reminder, reply and decline drafts with a fixed
+    placeholder whitelist (`{first_name}`, `{job_title}`, …; anything else is rejected) and live preview.
+21. **Reports**: printable shortlist report per job (criteria and weights, per-person ratings with cited
+    evidence and open questions, approval stamp with approver, revision and digest). Print / save as PDF.
+
 ## Role matrix
 
 | Capability | Candidate | Recruiter | Supervisor |
@@ -128,6 +166,9 @@ Email ownership is **not verified** in this prototype (registration only accepts
 | Authorize/pause/resume/cancel analysis | - | ✔ assigned jobs | ✔ all |
 | Save/approve shortlist, prepare/edit/approve emails | - | ✔ assigned jobs | ✔ all (explicit clicks) |
 | Publish availability, confirm/decline bookings | - | ✔ own calendar, assigned jobs | ✔ any interviewer |
+| Dashboard, candidates, review queue, inbox, follow-ups, interviews, reports | - | ✔ assigned jobs (+ unlinked HR mail) | ✔ all |
+| Message the recruiting team about own application | ✔ own only | - | - |
+| Templates (company-wide) | - | ✔ | ✔ |
 | Create staff, change roles, assignments, AI mode, audit | - | - | ✔ |
 
 All checks are enforced server-side inside the database queries; the UI only mirrors them.
@@ -179,10 +220,14 @@ unfinished tasks. Keys/projects are never rotated to evade limits.
 cd backend && .venv/bin/python -m pytest          # needs PostgreSQL; uses TEST_DATABASE_URL (default: postgres@localhost:55432/talent_test)
 # with docker compose:  TEST_DATABASE_URL=postgresql+psycopg://talent:talent-local-only@localhost:55432/talent_test
 ```
-47 tests cover the 16 required areas (candidate isolation, privilege boundaries, uploads, authorized analysis
+57 tests cover the 16 required areas (candidate isolation, privilege boundaries, uploads, authorized analysis
 scope, output validation, zero-call reweighting & cache invalidation, cache metrics honesty, approval-bound
 dispatch & idempotent outbox, drafting context isolation, malicious CV, concurrent slot requests on real
-PostgreSQL, invitation binding, hold expiry, quota pause without replay substitution, end-to-end to Mailpit).
+PostgreSQL, invitation binding, hold expiry, quota pause without replay substitution, end-to-end to Mailpit)
+plus the workbench (`tests/test_workbench.py`: dashboard scope and zero model calls, grounded replies to the
+verified address, injection mail blocks AI replies, reply-context isolation and schema rejection logged against
+the budget, batch reminder approval, template whitelist, kit + final scorecard, review-queue key forgery,
+decline letters, pool/report scope).
 The LLM is mocked; the e2e test is skipped if Mailpit is not running. No live API calls happen in tests.
 
 Browser smoke test (real UI → API → worker → Mailpit), on a freshly seeded DB in replay mode with

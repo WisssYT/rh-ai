@@ -19,6 +19,12 @@ import { CandidateApplication, CandidateDashboard, CandidateInterview, Candidate
 import { ApplicationsPage, HrDashboard } from "./pages/hr/HrJobs";
 import { ApprovalsPage, CalendarPage, RubricPage } from "./pages/hr/HrOps";
 import { ShortlistPage } from "./pages/hr/Shortlist";
+import { CandidatesPage } from "./pages/hr/Candidates";
+import { DashboardPage } from "./pages/hr/Dashboard";
+import { InboxPage } from "./pages/hr/Inbox";
+import { InterviewDetailPage, InterviewsPage } from "./pages/hr/Interviews";
+import { ReportPage, ReportsPage } from "./pages/hr/Reports";
+import { FollowUpsPage, ReviewQueuePage, TemplatesPage } from "./pages/hr/Workbench";
 import { JobDetailPage, JobsPage, LoginPage, RegisterPage, StaffLoginPage } from "./pages/public/Public";
 import { SupervisorPage } from "./pages/supervisor/Supervisor";
 
@@ -51,6 +57,16 @@ function App() {
         <Route path="/hr/jobs/:id/rubric" element={<RubricPage />} />
         <Route path="/hr/calendar" element={<CalendarPage />} />
         <Route path="/hr/approvals" element={<ApprovalsPage />} />
+        <Route path="/hr/dashboard" element={<DashboardPage />} />
+        <Route path="/hr/candidates" element={<CandidatesPage />} />
+        <Route path="/hr/review" element={<ReviewQueuePage />} />
+        <Route path="/hr/inbox" element={<InboxPage />} />
+        <Route path="/hr/followups" element={<FollowUpsPage />} />
+        <Route path="/hr/interviews" element={<InterviewsPage />} />
+        <Route path="/hr/interviews/:id" element={<InterviewDetailPage />} />
+        <Route path="/hr/templates" element={<TemplatesPage />} />
+        <Route path="/hr/reports" element={<ReportsPage />} />
+        <Route path="/hr/jobs/:id/report" element={<ReportPage />} />
         <Route path="/supervisor" element={<RequireRole roles={["supervisor"]} loginPath="/hr/login"><SupervisorPage /></RequireRole>} />
       </Route>
       <Route path="*" element={<div className="gate"><h1>Page not found</h1><a href="/jobs">Go to open roles</a></div>} />
