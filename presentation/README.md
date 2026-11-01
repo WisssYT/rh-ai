@@ -10,54 +10,58 @@
   Cut with `video/make_clips.py`. In the published deck they are uploaded assets (`/_blob/...`).
 * Before presenting: fill in the ask on `close` (`[__ TND]`, `[__] HR teams`).
 
-## Video (5:00, 1920×1080, 30 fps, silent)
+## Video (4:55, 1920×1080, 30 fps, with voiceover and music)
 
 `video/talent-detective-pitch-5min.mp4` — motion design interleaved with real screen recordings of the product
-(dynamic zoom-ins, cursor synced to recorded clicks, captions). `video/talent-detective-pitch.mp4` is the 1:50
-motion-only cut.
+(dynamic zoom-ins, cursor synced to recorded clicks, captions), with the recorded voiceover placed scene by scene
+and the music bed ducked underneath. `video/talent-detective-pitch.mp4` is the earlier 1:50 motion-only cut.
 
 * `video/film.html` — motion-design scenes (deterministic timeline, `render(t)`), brand tokens from `frontend/src/styles/tokens.css`
+* `video/make_s1.py` — re-times the opening "1,000 applications" scene to the spoken line (4.5 s instead of 9 s)
 * `video/record.py` — real-time recordings of the app via the Chrome DevTools screencast (frames + click log), run against
   the local demo (`docs/DEMO.md` seed, fictional data, AI replay mode — labelled on screen)
 * `video/live.html`, `video/live2.html` (+ `scenes2.js`) — the edit: camera keyframes or auto-camera that follows the
   recorded clicks, phone frame, captions
 * `video/render.py` — renders any HTML timeline frame by frame and encodes H.264 with ffmpeg (`--range`, `--fps`)
-* `video/assemble.sh` — cuts and splices all pieces into the 5-minute film
+* `video/assemble.sh` — cuts and splices all pieces and muxes the soundtrack
 
-```bash
-pip install playwright && playwright install chromium
-python video/record.py                                    # → rec/clips/<clip>/ frames + index.json
-FFMPEG=/path/to/ffmpeg python video/render.py             # motion film; then live.html / live2.html with --range/--fps
-FFMPEG=/path/to/ffmpeg bash video/assemble.sh
-```
+## Audio
 
-## Live narration (read over the 5-minute video)
+* `audio/talent.m4a` — raw voiceover recording; `audio/cinematic-electronic-background.mp3` — music
+* `audio/transcribe.py` — word-level transcript (offline faster-whisper) used to find stumbles and cut points
+* `audio/mix.py` — the edit decision list: keeps only clean takes (the restarted economics line at 2:13–2:38 of the
+  raw recording is dropped; the clean take is used), trims long pauses, cleans the voice (high-pass, light denoise,
+  compression, −16 LUFS), places each line on its scene, loops the music with crossfades, ducks it under the voice
+  (≈ 17 dB below speech, ≈ −26 LUFS in pauses), fades in/out
 
-| Time | Scene | Say |
+Voiceover placement in the final film:
+
+| Starts at | Line | Length |
 |---|---|---|
-| 0:00 | CV pile | "One role. A thousand applications." |
-| 0:09 | 66+ days | "For one recruiter, that's more than 66 working days. And a black-box AI is riskier still." |
-| 0:17 | Title | "Talent Detective. The agent executes; the human decides about people." |
-| 0:26 | **Live:** careers site + apply | "Candidates see exactly how each role is assessed, apply with a PDF in under a minute, and follow their stage — never a score." |
-| 0:50 | **Live:** phone | "It works on a phone today; a native app is on our roadmap." |
-| 1:00 | Workflow | "Behind it: intake, analysis, ranking — then the agent stops, and a person decides." |
-| 1:15 | **Live:** job criteria | "Recruiters define each job's criteria with explicit anchors. Nothing is ever auto-rejected." |
-| 1:27 | **Live:** authorize run | "The recruiter authorizes exactly this scope — and the agent reads all sixteen CVs." |
-| 1:42 | Evidence animation | "Every rating quotes the CV, checked by code. Unknown isn't bad — it becomes an interview question." |
-| 1:56 | **Live:** evidence + weights | "Here are the real quotes. Change a weight and the ranking updates instantly — zero model calls." |
-| 2:13 | Security animation | "Hidden instructions in a CV? Treated as data, no tools to abuse, output checked." |
-| 2:29 | **Live:** attacker + inbox | "Our attacker is flagged and his invitations are blocked. The malicious email is shown as untrusted text — never obeyed." |
-| 2:45 | **Live:** dashboard | "The dashboard shows evidence coverage — and a ledger of every attack caught." |
-| 2:54 | **Live:** approvals + send | "Nothing is sent until a person approves the exact message. Approve — and it goes out." |
-| 3:13 | **Live:** candidate books | "The candidate picks a slot from a private link…" |
-| 3:28 | **Live:** HR calendar | "…and the request waits in HR's calendar until a person confirms it." |
-| 3:37 | **Live:** interview kit | "Interview kits aim at the gaps — every question cites the quote or the unknown it came from." |
-| 3:52 | **Live:** follow-ups + report | "Follow-ups wait for approval too, and reports carry the approved shortlist with its evidence." |
-| 4:08 | **Live:** supervisor | "Supervisors see every human approval: who, what, which revision." |
-| 4:20 | Traction | "It's live, tested — and 1,000 applications processed in under eight minutes." |
-| 4:31 | Economics | "1,000 CVs: about 8,800 dinars of recruiter time, or about 18 dinars with Talent Detective." |
-| 4:42 | Research | "Our cost design builds on FrugalGPT and Prompt Cache." |
-| 4:50 | Close | "The agent does the legwork. People make the call." |
+| 0:00.3 | `one_role` | 2.6 s |
+| 0:04.8 | `66_days` | 5.7 s |
+| 0:13.3 | `title` | 4.1 s |
+| 0:22.3 | `candidates` | 7.8 s |
+| 0:46.1 | `phone` | 4.2 s |
+| 0:56.1 | `workflow` | 5.4 s |
+| 1:11.1 | `criteria` | 5.9 s |
+| 1:23.1 | `authorize` | 4.7 s |
+| 1:38.6 | `evidence` | 6.5 s |
+| 1:52.8 | `quotes` | 6.4 s |
+| 2:09.8 | `security` | 5.1 s |
+| 2:25.6 | `attacker` | 3.3 s |
+| 2:33.5 | `email` | 4.2 s |
+| 2:41.5 | `dashboard` | 5.3 s |
+| 2:50.5 | `approve` | 5.2 s |
+| 3:09.8 | `books` | 3.0 s |
+| 3:24.5 | `hr_waits` | 4.9 s |
+| 3:33.8 | `kit` | 5.5 s |
+| 3:48.8 | `followups` | 6.2 s |
+| 4:04.8 | `supervisor` | 4.9 s |
+| 4:16.6 | `traction` | 5.1 s |
+| 4:27.6 | `economics` | 8.2 s |
+| 4:38.5 | `research` | 3.7 s |
+| 4:47.0 | `close` | 3.8 s |
 
 ## Where the numbers come from
 
