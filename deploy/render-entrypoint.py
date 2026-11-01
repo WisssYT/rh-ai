@@ -88,6 +88,7 @@ def main():
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
     os.chdir("/app")
+    sys.path.insert(0, "/app")
     public = os.environ.get("RENDER_EXTERNAL_URL") or os.environ.get("PUBLIC_APP_URL", "")
     if not public.startswith("https://"):
         raise RuntimeError("Set PUBLIC_APP_URL to the HTTPS deployment URL")
