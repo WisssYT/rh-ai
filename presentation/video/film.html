@@ -39,10 +39,10 @@ body{font-family:'IBM Plex Sans',Arial,sans-serif;color:var(--ink)}
   </div>
 </div>
 
-<!-- S2 67 days -->
+<!-- S2 66+ days -->
 <div class="scene" id="s2" style="background:var(--ink);color:var(--paper)">
   <div class="abs" style="left:120px;top:200px;width:1700px">
-    <p style="font-size:44px;color:#b7b0a0" id="s2a">For one recruiter, evaluating them properly takes</p>
+    <p style="font-size:44px;color:#b7b0a0" id="s2a">For one recruiter, evaluating them properly takes more than</p>
     <h1 class="serif" style="font-size:330px;line-height:1;margin-top:20px" id="s2n"><span id="days">0</span> <span style="font-size:120px;font-style:italic">working days</span></h1>
     <p style="font-size:40px;color:var(--marker);margin-top:30px" id="s2b">And handing it to a black-box AI? Riskier still.</p>
   </div>
@@ -135,7 +135,7 @@ body{font-family:'IBM Plex Sans',Arial,sans-serif;color:var(--ink)}
 <div class="scene" id="s8" style="background:var(--ink);color:var(--paper)">
   <div class="abs" style="left:120px;top:100px"><p class="eyebrow" style="color:var(--marker)">Unit economics · 1,000 CVs</p><h2 class="serif" style="font-size:88px;margin-top:18px">Months of reading, or minutes</h2></div>
   <div class="abs" style="left:120px;top:360px;width:1680px">
-    <p style="font-size:34px;color:#b7b0a0">One recruiter · 67 working days</p>
+    <p style="font-size:34px;color:#b7b0a0">One recruiter · 66+ working days</p>
     <div style="display:flex;align-items:center;gap:30px;margin-top:14px"><div id="b0" style="height:90px;width:0;background:#8d8676;border-radius:4px"></div><p class="serif" style="font-size:80px" id="v0">0 TND</p></div>
     <p style="font-size:34px;color:#b9d1c8;margin-top:56px">Talent Detective · minutes</p>
     <div style="display:flex;align-items:center;gap:30px;margin-top:14px"><div id="b1" style="height:90px;width:0;background:var(--green);border-radius:4px"></div><p class="serif" style="font-size:80px;color:var(--marker)" id="v1">≈ 18 TND</p></div>
@@ -191,7 +191,7 @@ function render(t){
 const FN={
  s1(t){for(const s of sheets){const p=E(P(t,s.t0,s.t0+.7));s.d.style.transform=`translate(${s.x}px,${s.y-(1-p)*700}px) rotate(${s.r*(0.4+p*.6)}deg)`;s.d.style.opacity=p>0?1:0;}
   $("cnt").textContent=Math.round(1000*EIO(P(t,.3,6.6))).toLocaleString("en-US");rise($("s1h"),E(P(t,0,.8)));},
- s2(t){rise($("s2a"),E(P(t,.2,1)));$("days").textContent=Math.round(67*E(P(t,.8,3.2)));rise($("s2n"),E(P(t,.6,1.4)),60);rise($("s2b"),E(P(t,4.2,5)));},
+ s2(t){rise($("s2a"),E(P(t,.2,1)));$("days").textContent=Math.round(66*E(P(t,.8,3.2)));rise($("s2n"),E(P(t,.6,1.4)),60);rise($("s2b"),E(P(t,4.2,5)));},
  s3(t){rise($("s3e"),E(P(t,.2,.9)));const n=Math.round(title.length*P(t,.6,2.4));$("s3t").innerHTML=title.slice(0,n)+(t<2.8&&Math.floor(t*3)%2==0?"<span style='color:#f3d35a'>|</span>":"");
   rise($("s3l1"),E(P(t,3.2,4)));rise($("s3l2"),E(P(t,4.6,5.4)));},
  s4(t){const L=1430,p=EIO(P(t,1,8.5));const stopAt=(1192+125-245)/L; // approval node centre
