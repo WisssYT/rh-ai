@@ -1,0 +1,82 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Talent Detective Live</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400..700;1,6..72,400..600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:#17181c;font-family:'IBM Plex Sans',Arial,sans-serif}
+#stage{position:absolute;inset:0;opacity:0}
+#cam{position:absolute;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+#shot{position:absolute;left:0;top:0;width:1920px;height:1080px;display:block}
+#cursor{position:absolute;left:0;top:0;width:34px;height:34px;transform-origin:0 0}
+#ring{position:absolute;width:70px;height:70px;border-radius:50%;border:4px solid #f3d35a;opacity:0}
+#vig{position:absolute;inset:0;box-shadow:inset 0 0 140px rgba(23,24,28,.35);pointer-events:none}
+#badge{position:absolute;left:48px;top:40px;display:flex;align-items:center;gap:14px;background:#17181c;color:#f5f1e8;padding:12px 22px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:22px;letter-spacing:2px;text-transform:uppercase}
+#badge i{width:14px;height:14px;border-radius:50%;background:#e0533d;display:block}
+#cap{position:absolute;left:48px;bottom:48px;max-width:1500px;background:#17181c;color:#f5f1e8;padding:22px 34px;border-radius:6px;border-left:8px solid #f3d35a}
+#cap p{font-family:Newsreader,Georgia,serif;font-size:50px;line-height:1.15;font-weight:500}
+#cap span{display:block;font-family:'IBM Plex Mono',monospace;font-size:22px;color:#b7b0a0;margin-top:8px}
+</style></head>
+<body>
+<div id="stage">
+  <div id="cam"><img id="shot" alt=""><svg id="cursor" viewBox="0 0 24 24"><path d="M3 2 L3 19 L8 14.5 L11.5 22 L14.5 20.6 L11 13.3 L17.5 13.3 Z" fill="#17181c" stroke="#ffffff" stroke-width="1.6" stroke-linejoin="round"/></svg><div id="ring"></div></div>
+  <div id="vig"></div>
+  <div id="badge"><i></i>Live product · real recording · fictional data</div>
+  <div id="cap"><p id="capt"></p><span id="caps"></span></div>
+</div>
+<script src="clips.js"></script>
+<script>
+const K=1920/1440;
+const cl=x=>x<0?0:x>1?1:x, EIO=x=>{x=cl(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2}, E=x=>1-Math.pow(1-cl(x),3);
+// scene: clip, dur, segs [lt0,ct0] pairs (piecewise linear), cam [lt,cx,cy,s] keyframes (frame px), caps [lt0,lt1,title,sub]
+const SCENES=[
+ {clip:"analysis",dur:15.5,segs:[[0,0.3],[15.5,15.8]],
+  cam:[[0,720,405,1],[1.2,720,405,1],[2.2,1000,270,1.55],[4.6,700,300,1.45],[5.6,1050,370,1.45],[8.2,1050,370,1.45],[9.2,760,300,1.35],[15.5,760,300,1.35]],
+  caps:[[0.4,7.6,"Authorize exactly this scope","16 applications · rubric r1 · nothing else"],[7.8,15.5,"Then the agent does the reading","16/16 analysed · AI replay mode, clearly labelled"]]},
+ {clip:"evidence",dur:17,segs:[[0,0.4],[10,10.4],[11,13.2],[17,17.2]],
+  cam:[[0,720,405,1],[1.6,720,405,1],[2.6,1180,640,1.35],[3.6,1000,420,1.5],[10,1000,420,1.5],[11,720,405,1],[11.6,560,300,1.55],[17,600,300,1.55]],
+  caps:[[0.4,10.6,"Every rating quotes the CV","Verbatim quotes · page and segment · checked by code"],[10.8,17,"Change a weight — instant re-rank","Preview, not saved · 0 model calls"]]},
+ {clip:"attacker",dur:8,segs:[[0,0.2],[8,8.2]],
+  cam:[[0,720,405,1],[1.4,1150,450,1.3],[2.8,1050,300,1.6],[8,1050,300,1.6]],
+  caps:[[0.3,8,"The injection CV, caught","possible_prompt_injection · invitations blocked · human review"]]},
+ {clip:"inbox",dur:8,segs:[[0,0.4],[2.6,2.9],[2.6001,7.9],[8,13.3]],
+  cam:[[0,720,405,1],[1.2,520,250,1.4],[2.6,520,250,1.4],[2.61,720,405,1],[3.4,600,560,1.55],[8,600,560,1.55]],
+  caps:[[0.3,8,"Malicious email? Shown as untrusted text","Never obeyed · AI reply only from the candidate’s own file"]]},
+ {clip:"dashboard",dur:9,segs:[[0,0.6],[2.4,3.0],[4.6,4.6],[6.2,4.6],[9,6.2]],
+  cam:[[0,720,405,1],[1,1080,420,1.3],[2.4,1080,420,1.3],[3.2,1100,330,1.2],[6,1100,330,1.2],[6.9,450,460,1.65],[9,450,460,1.65]],
+  caps:[[0.3,6.2,"Live dashboard and evidence heatmap","Recorded facts only · hatched = no evidence yet"],[6.4,9,"A security ledger of everything caught",""]]},
+ {clip:"approvals",dur:7,segs:[[0,0.8],[7,5.8]],
+  cam:[[0,720,405,1],[1.2,640,330,1.4],[7,640,330,1.4]],
+  caps:[[0.3,7,"Nothing is sent until a person approves","The exact recipient, subject and message"]]}
+];
+let acc=0;for(const s of SCENES){s.start=acc;acc+=s.dur;}
+window.DURATION=acc;
+function piece(pts,lt){if(lt<=pts[0][0])return pts[0][1];for(let i=1;i<pts.length;i++){const[a0,b0]=pts[i-1],[a1,b1]=pts[i];if(lt<=a1)return b0+(b1-b0)*((lt-a0)/Math.max(1e-6,a1-a0));}return pts[pts.length-1][1];}
+function camAt(cam,lt){if(lt<=cam[0][0])return cam[0].slice(1);for(let i=1;i<cam.length;i++){const a=cam[i-1],b=cam[i];if(lt<=b[0]){const p=EIO((lt-a[0])/Math.max(1e-6,b[0]-a[0]));return[1,2,3].map(j=>a[j]+(b[j]-a[j])*p);}}return cam[cam.length-1].slice(1);}
+function cursorAt(ev,ct){let x=720,y=860,pos=[x,y],click=-1;
+ for(const e of ev){if(e.t>ct)break;
+  if(e.type==="move"){const p=EIO((ct-e.t)/0.65);pos=[pos[0]+(e.x-pos[0])*p,pos[1]+(e.y-pos[1])*p];if(p>=1)pos=[e.x,e.y];}
+  else{pos=[e.x,e.y];if(e.type==="click"||e.type==="down")click=e.t;}}
+ return{pos,click};}
+let curSrc="";
+async function render(t){
+ const st=document.getElementById("stage");
+ const s=SCENES.find(s=>t>=s.start&&t<s.start+s.dur)||SCENES[SCENES.length-1];
+ const lt=t-s.start;st.style.opacity=Math.min(1,lt/0.4)*Math.min(1,(s.dur-lt)/0.4);
+ const C=CLIPS[s.clip];const ct=piece(s.segs,lt);
+ let f=C.frames[0][1];for(const fr of C.frames){if(fr[0]<=ct)f=fr[1];else break;}
+ const src="../rec/clips/"+s.clip+"/"+f;const img=document.getElementById("shot");
+ if(src!==curSrc){curSrc=src;img.src=src;await img.decode().catch(()=>{});}
+ let[cx,cy,sc]=camAt(s.cam,lt);
+ let tx=960-cx*K*sc,ty=540-cy*K*sc;tx=Math.min(0,Math.max(1920-1920*sc,tx));ty=Math.min(0,Math.max(1080-1080*sc,ty));
+ document.getElementById("cam").style.transform=`translate(${tx}px,${ty}px) scale(${sc})`;
+ const cu=cursorAt(C.events,ct+0.05);const cur=document.getElementById("cursor");
+ const show=C.events.length&&ct>=C.events[0].t-0.2;cur.style.opacity=show?1:0;
+ cur.style.transform=`translate(${cu.pos[0]*K-4}px,${cu.pos[1]*K-3}px) scale(${1/Math.max(1,sc*0.85)})`;
+ const ring=document.getElementById("ring");const rp=cu.click>=0?(ct+0.05-cu.click)/0.45:2;
+ ring.style.opacity=rp>=0&&rp<1?1-rp:0;const rs=0.4+rp*0.8;ring.style.transform=`translate(${cu.pos[0]*K-35}px,${cu.pos[1]*K-35}px) scale(${rs})`;
+ const cap=s.caps.find(c=>lt>=c[0]&&lt<c[1]);const ce=document.getElementById("cap");
+ if(cap){const p=E((lt-cap[0])/0.45)*Math.min(1,(cap[1]-lt)/0.3);ce.style.opacity=p;ce.style.transform=`translateY(${(1-p)*30}px)`;document.getElementById("capt").textContent=cap[2];const sub=document.getElementById("caps");sub.textContent=cap[3];sub.style.display=cap[3]?"block":"none";}else ce.style.opacity=0;
+}
+window.render=render;
+</script>
+</body></html>
