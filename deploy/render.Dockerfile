@@ -13,6 +13,9 @@ FROM python:3.12-slim
 COPY --from=uv /uv /usr/local/bin/uv
 COPY --from=caddy /usr/bin/caddy /usr/local/bin/caddy
 COPY --from=mailpit /mailpit /usr/local/bin/mailpit
+# The public port is unprivileged. Remove inherited file capabilities so the
+# binary can execute in Render's restricted container without elevating privileges.
+RUN install -m 0755 /usr/local/bin/caddy /tmp/caddy && mv /tmp/caddy /usr/local/bin/caddy
 ENV UV_PROJECT_ENVIRONMENT=/opt/venv UV_LINK_MODE=copy \
     PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH"
