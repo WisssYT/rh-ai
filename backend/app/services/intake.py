@@ -126,6 +126,7 @@ def store_and_parse(db: Session, owner: User, data: bytes, filename: str | None)
     doc = ResumeDocument(
         owner_id=owner.id,
         storage_key=key,
+        source_bytes=data if s.database_file_storage else None,
         original_filename=safe_display_name(filename),
         size_bytes=len(data),
         sha256=sha,
@@ -164,4 +165,19 @@ def resume_path(doc: ResumeDocument) -> Path:
     p = (base / doc.storage_key).resolve()
     if base not in p.parents:
         raise HTTPException(404, "Document not found")
+    if not p.is_file():
+        data = doc.source_bytes
+        if data is None:
+            raise HTTPException(404, "Document file is unavailable")
+        if len(data) != doc.size_bytes or hashlib.sha256(data).hexdigest() != doc.sha256:
+            raise HTTPException(500, "Stored document failed its integrity check")
+        p.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        temp = p.with_name(f"{p.name}.{new_id()}.tmp")
+        try:
+            fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(fd, "wb") as f:
+                f.write(data)
+            os.replace(temp, p)
+        finally:
+            temp.unlink(missing_ok=True)
     return p

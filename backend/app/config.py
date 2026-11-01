@@ -58,6 +58,7 @@ class Settings(BaseSettings):
 
     # Uploads
     upload_dir: str = "./var/uploads"
+    database_file_storage: bool = False  # durable CVs on hosts with ephemeral filesystems
     max_upload_bytes: int = 5 * 1024 * 1024
     max_pdf_pages: int = 10
     max_extracted_chars: int = 40_000

@@ -1,4 +1,6 @@
 .env
+.env.cloud
+deploy/backups/
 backend/.env
 **/.venv/
 __pycache__/

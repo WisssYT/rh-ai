@@ -20,6 +20,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     String,
     Text,
     UniqueConstraint,
@@ -157,6 +158,7 @@ class ResumeDocument(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=new_id)
     owner_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True)
     storage_key: Mapped[str] = mapped_column(String(200))
+    source_bytes: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     original_filename: Mapped[str] = mapped_column(String(200))  # display only, never a path
     size_bytes: Mapped[int] = mapped_column(Integer)
     sha256: Mapped[str] = mapped_column(String(64), index=True)

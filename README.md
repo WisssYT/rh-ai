@@ -18,7 +18,7 @@ The product name lives in `PRODUCT_NAME` (backend env) and `VITE_PRODUCT_NAME` /
 - [Quick start](#quick-start) · [Accounts and URLs](#accounts-and-urls) · [Tests](#tests)
 - [Features](#what-works-end-to-end) · [Role matrix](#role-matrix) · [Approval interpretation](#how-recorded-is-interpreted)
 - [AI modes, quotas, caching](#ai-live-and-replay-modes) · [Volume results](#measured-volume-results) · [Limitations](#limitations)
-- Docs: [ARCHITECTURE](docs/ARCHITECTURE.md) · [SECURITY](docs/SECURITY.md) · [DESIGN](docs/DESIGN.md) · [DEMO](docs/DEMO.md) · [PITCH](docs/PITCH.md)
+- Docs: [ARCHITECTURE](docs/ARCHITECTURE.md) · [SECURITY](docs/SECURITY.md) · [DESIGN](docs/DESIGN.md) · [DEMO](docs/DEMO.md) · [PITCH](docs/PITCH.md) · [FREE CLOUD HOSTING](docs/CLOUD.md)
 
 ## Quick start
 

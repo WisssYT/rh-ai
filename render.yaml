@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: talent-detective
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./deploy/render.Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/system/status
+    autoDeployTrigger: off
+    maxShutdownDelaySeconds: 75
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: APP_ENV
+        value: development
+      - key: DEMO_MODE
+        value: "true"
+      - key: AI_MODE
+        value: live
+      - key: GEMINI_MODEL
+        value: gemini-3.6-flash
+      - key: AI_RPM
+        value: "5"
+      - key: AI_DAILY_CALL_BUDGET
+        value: "40"
+      - key: AI_CONCURRENCY
+        value: "1"

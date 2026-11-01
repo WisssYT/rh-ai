@@ -1,10 +1,63 @@
 """Requirement 4: invalid/oversized/malformed uploads fail safely; unparseable text -> review, not a low score."""
 
 import io
+import pytest
 
 from conftest import D, Client, apply, cv_pdf, make_job, make_staff, register, run_worker
 from app.fixtures.cvs import render_pdf
 from app.config import get_settings
+
+
+def test_cloud_cv_survives_local_disk_loss_and_keeps_owner_isolation():
+    from app.db import session_scope
+    from app.models import Application
+    from app.services.intake import resume_path
+
+    settings = get_settings()
+    previous = settings.database_file_storage
+    settings.database_file_storage = True
+    try:
+        job, owner = _setup()
+        original = cv_pdf("Alice Example", f"alice@{D}")
+        response = apply(owner, job, original)
+        assert response.status_code == 201
+        app_id = response.json()["id"]
+        with session_scope() as db:
+            app = db.get(Application, app_id)
+            assert app.document.source_bytes == original
+            resume_path(app.document).unlink()
+        outsider = register("Other Person", f"other@{D}")
+        assert outsider.get(f"/api/candidate/applications/{app_id}/resume").status_code == 404
+        download = owner.get(f"/api/candidate/applications/{app_id}/resume")
+        assert download.status_code == 200 and download.content == original
+    finally:
+        settings.database_file_storage = previous
+
+
+def test_cloud_cv_integrity_failure_does_not_restore_corrupt_bytes():
+    from fastapi import HTTPException
+    from app.db import session_scope
+    from app.models import Application
+    from app.services.intake import resume_path
+
+    settings = get_settings()
+    previous = settings.database_file_storage
+    settings.database_file_storage = True
+    try:
+        job, owner = _setup()
+        response = apply(owner, job, cv_pdf("Alice Example", f"alice@{D}"))
+        assert response.status_code == 201
+        with session_scope() as db:
+            app = db.get(Application, response.json()["id"])
+            path = resume_path(app.document)
+            path.unlink()
+            app.document.source_bytes = b"corrupt"
+            with pytest.raises(HTTPException) as error:
+                resume_path(app.document)
+            assert error.value.status_code == 500
+            assert not path.exists()
+    finally:
+        settings.database_file_storage = previous
 
 
 def _setup():

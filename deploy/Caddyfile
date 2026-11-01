@@ -1,0 +1,48 @@
+{$SITE_ADDRESS} {
+    encode zstd gzip
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy same-origin
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+    }
+
+    # API and browser share one origin, including session and CSRF cookies.
+    @api path /api /api/*
+    handle @api {
+        reverse_proxy {$API_UPSTREAM:api:8000}
+    }
+
+    @docs path /docs /docs/* /openapi.json /redoc
+    handle @docs {
+        forward_auth {$API_UPSTREAM:api:8000} {
+            uri /api/hr/nav-counts
+        }
+        reverse_proxy {$API_UPSTREAM:api:8000}
+    }
+
+    redir /mailbox /mailbox/ 308
+    handle /mailbox/* {
+        # Keep the fictional SMTP inbox behind the app's staff session.
+        forward_auth {$API_UPSTREAM:api:8000} {
+            uri /api/hr/nav-counts
+        }
+        @mail_read method GET HEAD
+        handle @mail_read {
+            reverse_proxy {$MAILPIT_UPSTREAM:mailpit:8025}
+        }
+        respond "The shared demo mailbox is read-only." 405
+    }
+
+    handle /assets/* {
+        root * /srv
+        header Cache-Control "public, max-age=31536000, immutable"
+        file_server
+    }
+    handle {
+        root * /srv
+        try_files {path} /index.html
+        header Cache-Control "no-cache"
+        file_server
+    }
+}
